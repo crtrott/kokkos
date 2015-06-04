@@ -593,11 +593,11 @@ AllocationRecordPool global_alloc_rec_pool;
 
 
 
-// convert a uintptr_t to an AllocationRecord pointer
+// convert a uint64_t to an AllocationRecord pointer
 inline
-AllocationRecord * to_alloc_rec( uintptr_t alloc_rec )
+AllocationRecord * to_alloc_rec( uint64_t alloc_rec )
 {
-  return reinterpret_cast<AllocationRecord *>( alloc_rec & ~static_cast<uintptr_t>(1) );
+  return reinterpret_cast<AllocationRecord *>( alloc_rec & ~static_cast<uint64_t>(1) );
 }
 
 } // unnamed namespace
@@ -621,7 +621,7 @@ void AllocationTracker::initalize(  AllocatorBase * arg_allocator
                                                                 , arg_label
                                                                );
 
-    m_alloc_rec = reinterpret_cast<uintptr_t>(alloc_rec) | REF_COUNT_BIT;
+    m_alloc_rec = reinterpret_cast<uint64_t>(alloc_rec) | REF_COUNT_BIT;
   }
 }
 
@@ -749,10 +749,10 @@ AllocationTracker AllocationTracker::find( void const * ptr, AllocatorBase const
   {
     if ( tracking_enabled() ) {
       alloc_rec->increment_ref_count();
-      tracker.m_alloc_rec = reinterpret_cast<uintptr_t>(alloc_rec) | REF_COUNT_BIT;
+      tracker.m_alloc_rec = reinterpret_cast<uint64_t>(alloc_rec) | REF_COUNT_BIT;
     }
     else {
-      tracker.m_alloc_rec = reinterpret_cast<uintptr_t>(alloc_rec);
+      tracker.m_alloc_rec = reinterpret_cast<uint64_t>(alloc_rec);
     }
   }
 

@@ -137,6 +137,14 @@
 
 #endif /* #if defined( __CUDA_ARCH__ ) */
 
+#if defined( KOKKOS_HAVE_KALMAR ) && defined( __KALMAR_CC__ )
+
+  #define KOKKOS_FORCEINLINE_FUNCTION  __attribute__((amp,cpu)) inline
+  #define KOKKOS_INLINE_FUNCTION       __attribute__((amp,cpu)) inline
+  #define KOKKOS_FUNCTION              __attribute__((amp,cpu))
+
+#endif
+
 #if defined( _OPENMP )
 
   /*  Compiling with OpenMP.
@@ -389,10 +397,27 @@
 //----------------------------------------------------------------------------
 /** Determine for what space the code is being compiled: */
 
-#if defined( __CUDACC__ ) && defined( __CUDA_ARCH__ ) && defined (KOKKOS_HAVE_CUDA)
+#if	defined (KOKKOS_HAVE_CUDA) && \
+	defined( __CUDACC__ ) && \
+	defined( __CUDA_ARCH__ )
+
 #define KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_CUDA
+
+#elif	defined( KOKKOS_HAVE_KALMAR ) && \
+	defined( __KALMAR_CC__ ) && \
+	defined( __GPU__ )
+
+#define KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU
+
+namespace Kokkos {
+KOKKOS_INLINE_FUNCTION
+void abort( const char * const message ) {}
+}
+
 #else
+
 #define KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
+
 #endif
 
 //----------------------------------------------------------------------------

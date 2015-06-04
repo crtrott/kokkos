@@ -250,9 +250,11 @@ struct AssertShapeBoundsAbort
                      const size_t i4 , const size_t i5 ,
                      const size_t i6 , const size_t i7 )
     {
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
       AssertShapeBoundsAbort< Kokkos::HostSpace >
         ::apply( rank ,    n0 , n1 , n2 , n3 , n4 , n5 , n6 , n7 ,
                  arg_rank, i0 , i1 , i2 , i3 , i4 , i5 , i6 , i7 );
+#endif
     }
 };
 

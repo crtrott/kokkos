@@ -554,7 +554,9 @@ public:
           // Previously claimed an unused entry that was not inserted.
           // Release this unused entry immediately.
           if (!m_available_indexes.reset(new_index) ) {
+#if ! defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
             printf("Unable to free existing\n");
+#endif
           }
 
         }

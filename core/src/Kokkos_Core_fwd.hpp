@@ -77,6 +77,10 @@ class CudaHostPinnedSpace ;  ///< Memory space on Host accessible to Cuda GPU
 class Cuda ;                 ///< Execution space for Cuda GPU
 #endif
 
+#if defined( KOKKOS_HAVE_KALMAR )
+class Kalmar ;
+#endif
+
 template<class ExecutionSpace, class MemorySpace>
 struct Device;
 } // namespace Kokkos
@@ -93,6 +97,8 @@ namespace Kokkos {
 
 #if   defined ( KOKKOS_HAVE_DEFAULT_DEVICE_TYPE_CUDA )
   typedef Cuda DefaultExecutionSpace ;
+#elif defined ( KOKKOS_HAVE_DEFAULT_DEVICE_TYPE_KALMAR )
+  typedef Kalmar DefaultExecutionSpace ;
 #elif defined ( KOKKOS_HAVE_DEFAULT_DEVICE_TYPE_OPENMP )
   typedef OpenMP DefaultExecutionSpace ;
 #elif defined ( KOKKOS_HAVE_DEFAULT_DEVICE_TYPE_THREADS )
@@ -133,6 +139,8 @@ namespace Impl {
 #if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_CUDA ) && defined (KOKKOS_HAVE_CUDA)
 typedef Kokkos::CudaSpace  ActiveExecutionMemorySpace ;
 #elif defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
+typedef Kokkos::HostSpace  ActiveExecutionMemorySpace ;
+#elif defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
 typedef Kokkos::HostSpace  ActiveExecutionMemorySpace ;
 #else
 typedef void ActiveExecutionMemorySpace ;

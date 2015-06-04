@@ -1,13 +1,13 @@
 /*
 //@HEADER
 // ************************************************************************
-// 
+//
 //                        Kokkos v. 2.0
 //              Copyright (2014) Sandia Corporation
-// 
+//
 // Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 // the U.S. Government retains certain rights in this software.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -36,40 +36,76 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Questions? Contact  H. Carter Edwards (hcedwar@sandia.gov)
-// 
+//
 // ************************************************************************
 //@HEADER
 */
 
-#if defined( KOKKOS_ATOMIC_HPP ) && ! defined( KOKKOS_MEMORY_FENCE )
-#define KOKKOS_MEMORY_FENCE
+#include <Kalmar/Kokkos_Kalmar_Reduce.hpp>
+
 namespace Kokkos {
+namespace Impl {
 
-//----------------------------------------------------------------------------
-
-KOKKOS_FORCEINLINE_FUNCTION
-void memory_fence()
+template< class FunctorType , class Arg0 , class Arg1 , class Arg2 >
+class ParallelFor< FunctorType
+                 , Kokkos::RangePolicy< Arg0 , Arg1 , Arg2 , Kokkos::Kalmar > >
 {
-#if defined( __KALMAR_CC__ )
-  ;
-#elif defined( KOKKOS_ATOMICS_USE_CUDA )
-  __threadfence();
-#elif defined( KOKKOS_ATOMICS_USE_GCC ) || \
-      ( defined( KOKKOS_COMPILER_NVCC ) && defined( KOKKOS_ATOMICS_USE_INTEL ) )
-  __sync_synchronize();
-#elif defined( KOKKOS_ATOMICS_USE_INTEL )
-  _mm_mfence();
-#elif defined( KOKKOS_ATOMICS_USE_OMP31 )
-  #pragma omp flush
-#elif defined( KOKKOS_ATOMICS_USE_WINDOWS )
-  MemoryBarrier();
-#else
- #error "Error: memory_fence() not defined"
-#endif
+private:
+
+  typedef Kokkos::RangePolicy< Arg0 , Arg1 , Arg2 , Kokkos::Kalmar > Policy ;
+
+  FunctorType m_functor ;
+  typename Policy::member_type m_offset ;
+
+  inline
+  void operator()( const concurrency::index<1> & idx ) const restrict(amp)
+    {
+       m_functor( idx[0] + m_offset);
+    }
+
+public:
+
+  inline
+  ParallelFor( const FunctorType & functor
+             , const Policy      & policy )
+     : m_functor( functor ),
+       m_offset( policy.begin() )
+    {
+
+      auto make_lambda = [this]( const concurrency::index<1> & idx ) restrict(amp) {
+        this->operator() (idx);
+      };
+      concurrency::parallel_for_each( concurrency::extent<1>(
+         policy.end()-policy.begin()) , make_lambda);
+
+    }
+};
+
+template< class FunctorType , class Arg0 , class Arg1 , class Arg2 >
+class ParallelReduce<
+  FunctorType , Kokkos::RangePolicy< Arg0 , Arg1 , Arg2 , Kokkos::Kalmar > >
+{
+public:
+
+  typedef Kokkos::RangePolicy< Arg0 , Arg1 , Arg2 , Kokkos::Kalmar > Policy ;
+
+  template< class ViewType >
+  inline
+  ParallelReduce( typename Impl::enable_if<
+                    ( Impl::is_view< ViewType >::value &&
+                      Impl::is_same< typename ViewType::memory_space , HostSpace >::value
+                    ), const FunctorType & >::type functor
+                , const Policy    & policy
+                , const ViewType  & result_view )
+    {
+      Kokkos::Impl::reduce_enqueue
+        ( policy.end() - policy.begin()
+        , functor
+        , result_view()
+        );
+    }
+};
+
 }
-
-} // namespace kokkos
-
-#endif
-
+}
 

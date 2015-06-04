@@ -95,7 +95,9 @@ public:
     void* tmp = m_iter ;
     if (m_end < (m_iter += align (size))) {
       m_iter -= align (size); // put it back like it was
+#if ! defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
       printf ("ScratchMemorySpace<...>::get_shmem: Failed to allocate %ld byte(s); remaining capacity is %ld byte(s)\n", long(size), long(m_end-m_iter));
+#endif
       tmp = 0;
     }
     return tmp;

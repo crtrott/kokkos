@@ -66,7 +66,8 @@ int bit_scan_forward(unsigned i)
 {
 #if defined( __CUDA_ARCH__ )
   return __ffs(i) - 1;
-#elif defined( __GNUC__ ) || defined( __GNUG__ )
+#elif ( defined( __GNUC__ ) || defined( __GNUG__ ) ) && \
+	! defined(  KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
   return __builtin_ffs(i) - 1;
 #elif defined( __INTEL_COMPILER )
   return _bit_scan_forward(i);
@@ -74,7 +75,8 @@ int bit_scan_forward(unsigned i)
 
   unsigned t = 1u;
   int r = 0;
-  while (i && (i & t == 0))
+  // while (i && (i & t == 0 ))
+  while (i && (i & ( t == 0 ) ))
   {
     t = t << 1;
     ++r;
@@ -90,14 +92,16 @@ int bit_scan_reverse(unsigned i)
   enum { shift = static_cast<int>(sizeof(unsigned)*CHAR_BIT - 1) };
 #if defined( __CUDA_ARCH__ )
   return shift - __clz(i);
-#elif defined( __GNUC__ ) || defined( __GNUG__ )
+#elif ( defined( __GNUC__ ) || defined( __GNUG__ ) ) && \
+	! defined(  KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
   return shift - __builtin_clz(i);
 #elif defined( __INTEL_COMPILER )
   return _bit_scan_reverse(i);
 #else
   unsigned t = 1u << shift;
   int r = 0;
-  while (i && (i & t == 0))
+  // while (i && (i & t == 0))
+  while (i && (i & ( t == 0)) )
   {
     t = t >> 1;
     ++r;
@@ -113,7 +117,8 @@ int popcount(unsigned i)
 {
 #if defined( __CUDA_ARCH__ )
   return __popc(i);
-#elif defined( __GNUC__ ) || defined( __GNUG__ )
+#elif ( defined( __GNUC__ ) || defined( __GNUG__ ) ) && \
+	! defined(  KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
   return __builtin_popcount(i);
 #elif defined ( __INTEL_COMPILER )
   return _popcnt32(i);

@@ -2,7 +2,7 @@
 
 #Options: OpenMP,Serial,Pthreads,Cuda
 KOKKOS_DEVICES ?= "OpenMP"
-#Options: KNC,SNB,HSW,Kepler,Kepler30,Kepler35,Kepler37,Maxwell,Maxwell50,ARMv8,BGQ,Power7,Power8
+#Options: KNC,SNB,HSW,Kepler,Kepler30,Kepler35,Kepler37,Maxwell,Maxwell50,ARMv8,BGQ,Power7,Power8,HSA
 KOKKOS_ARCH ?= ""
 #Options: yes,no
 KOKKOS_DEBUG ?= "no"
@@ -34,10 +34,13 @@ KOKKOS_INTERNAL_CUDA_USE_RELOC := $(strip $(shell echo $(KOKKOS_CUDA_OPTIONS) | 
 KOKKOS_INTERNAL_USE_OPENMP := $(strip $(shell echo $(KOKKOS_DEVICES) | grep OpenMP | wc -l))
 KOKKOS_INTERNAL_USE_PTHREADS := $(strip $(shell echo $(KOKKOS_DEVICES) | grep Pthread | wc -l))
 KOKKOS_INTERNAL_USE_SERIAL := $(strip $(shell echo $(KOKKOS_DEVICES) | grep Serial | wc -l))
+KOKKOS_INTERNAL_USE_KALMAR := $(strip $(shell echo $(KOKKOS_DEVICES) | grep Kalmar | wc -l))
 
+ifeq ($(KOKKOS_INTERNAL_USE_KALMAR), 0)
 ifeq ($(KOKKOS_INTERNAL_USE_OPENMP), 0)
 ifeq ($(KOKKOS_INTERNAL_USE_PTHREADS), 0)
 	KOKKOS_INTERNAL_USE_SERIAL := 1
+endif
 endif
 endif
 
@@ -134,6 +137,10 @@ endif
 
 ifeq ($(KOKKOS_INTERNAL_USE_CUDA), 1)
 	tmp := $(shell echo "\#define KOKKOS_HAVE_CUDA 1" >> KokkosCore_config.tmp )
+endif
+
+ifeq ($(KOKKOS_INTERNAL_USE_KALMAR), 1)
+        tmp := $(shell echo '\#define KOKKOS_HAVE_KALMAR 1' >> KokkosCore_config.tmp)
 endif
 
 tmp := $(shell echo "/* General Settings */" >> KokkosCore_config.tmp)
@@ -252,6 +259,12 @@ ifeq ($(KOKKOS_INTERNAL_USE_OPENMP), 1)
 	KOKKOS_LDFLAGS += $(KOKKOS_INTERNAL_OPENMP_FLAG)
 endif
 
+ifeq ($(KOKKOS_INTERNAL_USE_KALMAR), 1)
+        KOKKOS_SRC += $(wildcard $(KOKKOS_PATH)/core/src/Kalmar/*.cpp)
+        KOKKOS_HEADERS += $(wildcard $(KOKKOS_PATH)/core/src/Kalmar/*.hpp)
+        KOKKOS_CXXFLAGS += `/opt/kalmar/bin/clamp-config --cxxflags`
+        KOKKOS_LDFLAGS += `/opt/kalmar/bin/clamp-config --ldflags`
+endif
 
 # Setting up dependencies
 

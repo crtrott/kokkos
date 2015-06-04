@@ -49,6 +49,10 @@
 
 #include <Kokkos_Core_fwd.hpp>
 
+#if defined( KOKKOS_HAVE_KALMAR )
+#include <Kokkos_Kalmar.hpp>
+#endif
+
 #if defined( KOKKOS_HAVE_CUDA )
 #include <Kokkos_Cuda.hpp>
 #endif

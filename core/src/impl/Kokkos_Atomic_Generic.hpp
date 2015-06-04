@@ -214,13 +214,17 @@ T atomic_fetch_oper( const Oper& op, volatile T * const dest ,
            , const T >::type val )
 {
 
-#ifdef KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST ) && \
+	defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
+
   while( !Impl::lock_address_host_space( (void*) dest ) );
   T return_val = *dest;
   *dest = Oper::apply(return_val, val);
   Impl::unlock_address_host_space( (void*) dest );
   return return_val;
-#else
+
+#elif defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_CUDA )
+
   // This is a way to (hopefully) avoid dead lock in a warp
   bool done = false;
   while (! done ) {
@@ -231,6 +235,7 @@ T atomic_fetch_oper( const Oper& op, volatile T * const dest ,
     }
   }
   return return_val;
+
 #endif
 }
 
@@ -246,13 +251,17 @@ T atomic_oper_fetch( const Oper& op, volatile T * const dest ,
            , const T >::type& val )
 {
 
-#ifdef KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST ) && \
+	defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
+
   while( !Impl::lock_address_host_space( (void*) dest ) );
   T return_val = Oper::apply(*dest, val);
   *dest = return_val;
   Impl::unlock_address_host_space( (void*) dest );
   return return_val;
-#else
+
+#elif defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_CUDA )
+
   // This is a way to (hopefully) avoid dead lock in a warp
   bool done = false;
   while (! done ) {

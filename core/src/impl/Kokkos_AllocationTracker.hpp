@@ -434,7 +434,7 @@ public:
   AllocationTracker( const AllocationTracker & rhs )
     : m_alloc_rec( rhs.m_alloc_rec)
   {
-#if !defined( __CUDA_ARCH__ )
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
     if ( rhs.ref_counting() && tracking_enabled() ) {
       increment_ref_count();
     }
@@ -452,7 +452,7 @@ public:
   AllocationTracker & operator=( const AllocationTracker & rhs )
   {
     if (this != &rhs) {
-#if !defined( __CUDA_ARCH__ )
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
       if ( ref_counting() ) {
         decrement_ref_count();
       }
@@ -478,7 +478,7 @@ public:
   KOKKOS_INLINE_FUNCTION
   ~AllocationTracker()
   {
-#if !defined( __CUDA_ARCH__ )
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
     if ( ref_counting() ) {
       decrement_ref_count();
     }
@@ -498,7 +498,7 @@ public:
   KOKKOS_INLINE_FUNCTION
   void clear()
   {
-#if !defined( __CUDA_ARCH__ )
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
     if ( ref_counting() ) {
       decrement_ref_count();
     }
