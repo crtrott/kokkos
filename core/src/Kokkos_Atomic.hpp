@@ -75,11 +75,15 @@
 #if defined(_WIN32)
 #define KOKKOS_ATOMICS_USE_WINDOWS
 #else
-#if defined( __CUDA_ARCH__ ) && defined( KOKKOS_HAVE_CUDA )
+#if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_CUDA )
 
 // Compiling NVIDIA device code, must use Cuda atomics:
 
 #define KOKKOS_ATOMICS_USE_CUDA
+
+//#elif defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
+
+//#define KOKKOS_ATOMICS_USE_KALMAR_GPU
 
 #elif ! defined( KOKKOS_ATOMICS_USE_GCC ) && \
       ! defined( KOKKOS_ATOMICS_USE_INTEL ) && \
@@ -161,6 +165,10 @@ void atomic_decrement(volatile T* a);
 #include<impl/Kokkos_Atomic_Assembly_X86.hpp>
 #endif
 
+#if defined( KOKKOS_HAVE_KALMAR )
+#include <Kalmar/Kokkos_Kalmar_Atomic.hpp>
+#endif
+
 namespace Kokkos {
 
 
@@ -169,6 +177,8 @@ const char * atomic_query_version()
 {
 #if defined( KOKKOS_ATOMICS_USE_CUDA )
   return "KOKKOS_ATOMICS_USE_CUDA" ;
+#elif defined( KOKKOS_ATOMICS_USE_KALMAR_GPU )
+  return "KOKKOS_ATOMICS_USE_KALMAR_GPU" ;
 #elif defined( KOKKOS_ATOMICS_USE_GCC )
   return "KOKKOS_ATOMICS_USE_GCC" ;
 #elif defined( KOKKOS_ATOMICS_USE_INTEL )
