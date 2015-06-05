@@ -1,0 +1,121 @@
+make: Warning: File `/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp' has modification time 6.8 s in the future
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1   -c main.cpp
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:1893:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_Atomic_View.hpp:47:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Atomic.hpp:169:
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:46:12: error: no member named 'atomic_fetch_add' in the global namespace; did you mean simply 'atomic_fetch_add'?
+    return ::atomic_fetch_add(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_add
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:45:7: note: 'atomic_fetch_add' declared here
+  int atomic_fetch_add(int* dest, int& val) {
+      ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:51:12: error: no member named 'atomic_fetch_add' in the global namespace; did you mean simply 'atomic_fetch_add'?
+    return ::atomic_fetch_add(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_add
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:50:16: note: 'atomic_fetch_add' declared here
+  unsigned int atomic_fetch_add(unsigned int* dest, unsigned int& val) {
+               ^
+2 errors generated.
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:1893:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_Atomic_View.hpp:47:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Atomic.hpp:169:
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:13:5: error: no member named 'atomic_compare_exchange' in the global namespace; did you mean simply 'atomic_compare_exchange'?
+    ::atomic_compare_exchange(dest,&compare,val);
+    ^~~~~~~~~~~~~~~~~~~~~~~~~
+    atomic_compare_exchange
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:11:7: note: 'atomic_compare_exchange' declared here
+  int atomic_compare_exchange(int* dest, int compare, int& val) {
+      ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:13:36: error: cannot initialize a parameter of type 'int' with an rvalue of type 'int *'
+    ::atomic_compare_exchange(dest,&compare,val);
+                                   ^~~~~~~~
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:11:46: note: passing argument to parameter 'compare' here
+  int atomic_compare_exchange(int* dest, int compare, int& val) {
+                                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:21:5: error: no member named 'atomic_compare_exchange' in the global namespace; did you mean simply 'atomic_compare_exchange'?
+    ::atomic_compare_exchange(dest,&compare,val);
+    ^~~~~~~~~~~~~~~~~~~~~~~~~
+    atomic_compare_exchange
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:19:16: note: 'atomic_compare_exchange' declared here
+  unsigned int atomic_compare_exchange(unsigned int* dest, unsigned int compare, unsigned int& val) {
+               ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:21:36: error: cannot initialize a parameter of type 'unsigned int' with an rvalue of type 'unsigned int *'
+    ::atomic_compare_exchange(dest,&compare,val);
+                                   ^~~~~~~~
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:19:73: note: passing argument to parameter 'compare' here
+  unsigned int atomic_compare_exchange(unsigned int* dest, unsigned int compare, unsigned int& val) {
+                                                                        ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:46:12: error: no member named 'atomic_fetch_add' in the global namespace; did you mean simply 'atomic_fetch_add'?
+    return ::atomic_fetch_add(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_add
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:45:7: note: 'atomic_fetch_add' declared here
+  int atomic_fetch_add(int* dest, int& val) {
+      ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:51:12: error: no member named 'atomic_fetch_add' in the global namespace; did you mean simply 'atomic_fetch_add'?
+    return ::atomic_fetch_add(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_add
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:50:16: note: 'atomic_fetch_add' declared here
+  unsigned int atomic_fetch_add(unsigned int* dest, unsigned int& val) {
+               ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:77:12: error: no member named 'atomic_fetch_sub' in the global namespace; did you mean simply 'atomic_fetch_sub'?
+    return ::atomic_fetch_sub(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_sub
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:75:7: note: 'atomic_fetch_sub' declared here
+  int atomic_fetch_sub(int* dest, int val) {
+      ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:84:12: error: no member named 'atomic_fetch_sub' in the global namespace; did you mean simply 'atomic_fetch_sub'?
+    return ::atomic_fetch_sub(dest,val);
+           ^~~~~~~~~~~~~~~~~~
+           atomic_fetch_sub
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:82:16: note: 'atomic_fetch_sub' declared here
+  unsigned int atomic_fetch_sub(unsigned int* dest, unsigned int& val) {
+               ^
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:1893:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_Atomic_View.hpp:47:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Atomic.hpp:225:
+/home/crtrott/kokkos/core/src/impl/Kokkos_Atomic_Fetch_Add.hpp:308:3: error: no matching function for call to 'atomic_fetch_add'
+  atomic_fetch_add(dest,src);
+  ^~~~~~~~~~~~~~~~
+main.cpp:62:27: note: in instantiation of function template specialization 'Kokkos::atomic_add<int>' requested here
+    if ( i < 10 ) Kokkos::atomic_add(&data[i], 10*i) ;
+                          ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:63:8: note: in instantiation of member function 'functor_type_range_for<int>::operator()' requested here
+       m_functor( idx[0] + m_offset);
+       ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:76:15: note: in instantiation of member function 'Kokkos::Impl::ParallelFor<functor_type_range_for<int>, Kokkos::RangePolicy<Kokkos::Kalmar, void, void, Kokkos::Kalmar> >::operator()' requested here
+        this->operator() (idx);
+              ^
+/home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:196:10: note: in instantiation of member function 'Kokkos::Impl::ParallelFor<functor_type_range_for<int>, Kokkos::RangePolicy<Kokkos::Kalmar, void, void, Kokkos::Kalmar> >::ParallelFor' requested here
+  (void) Impl::ParallelFor< FunctorType , ExecPolicy >( Impl::CopyWithoutTracking::apply(functor) , policy );
+         ^
+main.cpp:76:11: note: in instantiation of function template specialization 'Kokkos::parallel_for<Kokkos::RangePolicy<Kokkos::Kalmar, void, void, Kokkos::Kalmar>, functor_type_range_for<int> >' requested here
+  Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::Kalmar>(0,10),f);
+          ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:56:5: note: candidate function [with T = volatile int] not viable: 2nd argument ('const int') would lose const qualifier
+  T atomic_fetch_add(T* dest, typename std::enable_if<sizeof(T) == sizeof(int),T>::type & val) {
+    ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:45:7: note: candidate function not viable: 1st argument ('volatile int *const') would lose volatile qualifier
+  int atomic_fetch_add(int* dest, int& val) {
+      ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Atomic.hpp:50:16: note: candidate function not viable: no known conversion from 'volatile int *const' to 'unsigned int *' for 1st argument
+  unsigned int atomic_fetch_add(unsigned int* dest, unsigned int& val) {
+               ^
+9 errors generated.
+make: *** [main.o] Error 1

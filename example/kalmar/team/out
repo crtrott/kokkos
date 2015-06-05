@@ -1,0 +1,150 @@
+make: Warning: File `/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp' has modification time 5.6 s in the future
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1   -c main.cpp
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:51:32: warning: inline function 'Kokkos::kalmar_team_member_type::league_rank' is not defined [-Wundefined-inline]
+    KOKKOS_INLINE_FUNCTION int league_rank() const ;
+                               ^
+main.cpp:64:13: note: used here
+    if(team.league_rank()<10)
+            ^
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:127:
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:53:32: warning: inline function 'Kokkos::kalmar_team_member_type::team_rank' is not defined [-Wundefined-inline]
+    KOKKOS_INLINE_FUNCTION int team_rank() const ;
+                               ^
+main.cpp:65:13: note: used here
+    if(team.team_rank()<10)
+            ^
+3 warnings generated.
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:51:32: warning: inline function 'Kokkos::kalmar_team_member_type::league_rank' is not defined [-Wundefined-inline]
+    KOKKOS_INLINE_FUNCTION int league_rank() const ;
+                               ^
+main.cpp:64:13: note: used here
+    if(team.league_rank()<10)
+            ^
+In file included from main.cpp:2:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:127:
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:53:32: warning: inline function 'Kokkos::kalmar_team_member_type::team_rank' is not defined [-Wundefined-inline]
+    KOKKOS_INLINE_FUNCTION int team_rank() const ;
+                               ^
+main.cpp:65:13: note: used here
+    if(team.team_rank()<10)
+            ^
+3 warnings generated.
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_AllocationTracker.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_BasicAllocators.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_Core.cpp
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_Core.cpp:44:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+1 warning generated.
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_Core.cpp:44:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+1 warning generated.
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_Error.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_HostSpace.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_hwloc.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_Serial.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_Serial_TaskPolicy.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_Shape.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/core/src/impl/Kokkos_spinwait.cpp
+/opt/kalmar/bin/clang++ -I./ -I/home/crtrott/kokkos/core/src -I/home/crtrott/kokkos/containers/src -I/home/crtrott/kokkos/algorithms/src  --std=c++11 `/opt/kalmar/bin/clamp-config --cxxflags` -O3 -std=c++amp -Xclang -fhsa-ext -Xclang -fno-auto-auto -I/opt/kalmar/include -I/opt/kalmar/include/c++/v1  -c /home/crtrott/kokkos/containers/src/impl/Kokkos_UnorderedMap_impl.cpp
+In file included from /home/crtrott/kokkos/containers/src/impl/Kokkos_UnorderedMap_impl.cpp:44:
+In file included from /home/crtrott/kokkos/containers/src/Kokkos_UnorderedMap.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+1 warning generated.
+In file included from /home/crtrott/kokkos/containers/src/impl/Kokkos_UnorderedMap_impl.cpp:44:
+In file included from /home/crtrott/kokkos/containers/src/Kokkos_UnorderedMap.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Core.hpp:53:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Kalmar.hpp:58:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_Parallel.hpp:52:
+In file included from /home/crtrott/kokkos/core/src/Kokkos_View.hpp:57:
+In file included from /home/crtrott/kokkos/core/src/impl/Kokkos_ViewSupport.hpp:47:
+/home/crtrott/kokkos/core/src/Kokkos_ExecPolicy.hpp:313:30: warning: inline function 'Kokkos::TeamPolicy<Kokkos::Kalmar, void, Kokkos::Kalmar>::league_size' is not defined [-Wundefined-inline]
+  KOKKOS_INLINE_FUNCTION int league_size() const ;
+                             ^
+/home/crtrott/kokkos/core/src/Kalmar/Kokkos_Kalmar_Parallel.hpp:59:35: note: used here
+      : m_league_size( arg_policy.league_size() )
+                                  ^
+1 warning generated.
+ar cr libkokkos.a Kokkos_AllocationTracker.o Kokkos_BasicAllocators.o Kokkos_Core.o Kokkos_Error.o Kokkos_HostSpace.o Kokkos_hwloc.o Kokkos_Serial.o Kokkos_Serial_TaskPolicy.o Kokkos_Shape.o Kokkos_spinwait.o Kokkos_UnorderedMap_impl.o
+/opt/kalmar/bin/clang++ -L/home/crtrott/test/team `/opt/kalmar/bin/clamp-config --ldflags` -std=c++amp -Xclang -fhsa-ext -L/opt/kalmar/lib -Wl,--rpath=/opt/kalmar/lib -lc++ -lcxxrt -ldl -lpthread -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive    main.o -lkokkos   -o main.host
+clang-3.5: warning: argument unused during compilation: '-Xclang -fhsa-ext'
+When checking the updated function of: 
+declare i32 @_ZNK6Kokkos10TeamPolicyINS_6KalmarEvS1_E11league_sizeEv(%"class.Kokkos::TeamPolicy"*) #8
+
+ into: 
+declare i32 @_ZNK6Kokkos10TeamPolicyINS_6KalmarEvS1_E11league_sizeEv2(%"class.Kokkos::TeamPolicy.7" addrspace(1)*)
+
+Referencing function in another module!
+  %6 = tail call i32 @_ZNK6Kokkos10TeamPolicyINS_6KalmarEvS1_E11league_sizeEv2(%"class.Kokkos::TeamPolicy.7" addrspace(1)* %1) #8
+Referencing function in another module!
+  %13 = call i32 @_ZNK6Kokkos23kalmar_team_member_type11league_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+Referencing function in another module!
+  %16 = call i32 @_ZNK6Kokkos23kalmar_team_member_type9team_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+Referencing function in another module!
+  %19 = call i32 @_ZNK6Kokkos23kalmar_team_member_type11league_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+Referencing function in another module!
+  %21 = call i32 @_ZNK6Kokkos23kalmar_team_member_type9team_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+Referencing function in another module!
+  %23 = call i32 @_ZNK6Kokkos23kalmar_team_member_type11league_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+Referencing function in another module!
+  %24 = call i32 @_ZNK6Kokkos23kalmar_team_member_type9team_rankEv(%"struct.Kokkos::kalmar_team_member_type"* %team.i.i) #8
+LLVM ERROR: Broken function found, compilation aborted!
+Generating HSAIL BRIG kernel failed
+clang-3.5: error: linker command failed with exit code 1 (use -v to see invocation)
+make: *** [main.host] Error 1
