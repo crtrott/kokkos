@@ -58,6 +58,12 @@ ifeq ($(KOKKOS_INTERNAL_USE_QTHREAD), 1)
 	TEST_TARGETS += test-qthread
 endif
 
+ifeq ($(KOKKOS_INTERNAL_USE_KALMAR), 1)
+	OBJ_KALMAR = TestKalmar.o UnitTestMain.o gtest-all.o
+	TARGETS += KokkosCore_UnitTest_Kalmar
+	TEST_TARGETS += test-kalmar
+endif
+
 OBJ_HWLOC = TestHWLOC.o UnitTestMain.o gtest-all.o
 TARGETS += KokkosCore_UnitTest_HWLOC
 TEST_TARGETS += test-hwloc
@@ -90,6 +96,9 @@ KokkosCore_UnitTest_Serial: $(OBJ_SERIAL) $(KOKKOS_LINK_DEPENDS)
 KokkosCore_UnitTest_Qthread: $(OBJ_QTHREAD) $(KOKKOS_LINK_DEPENDS)
 	$(LINK) $(KOKKOS_LDFLAGS) $(LDFLAGS) $(EXTRA_PATH) $(OBJ_QTHREAD) $(KOKKOS_LIBS) $(LIB) -o KokkosCore_UnitTest_Qthread
 
+KokkosCore_UnitTest_Kalmar: $(OBJ_KALMAR) $(KOKKOS_LINK_DEPENDS)
+	$(LINK) $(KOKKOS_LDFLAGS) $(LDFLAGS) $(EXTRA_PATH) $(OBJ_KALMAR) $(KOKKOS_LIBS) $(LIB) -o KokkosCore_UnitTest_Kalmar
+
 KokkosCore_UnitTest_HWLOC: $(OBJ_HWLOC) $(KOKKOS_LINK_DEPENDS)
 	$(LINK) $(KOKKOS_LDFLAGS) $(LDFLAGS) $(EXTRA_PATH) $(OBJ_HWLOC) $(KOKKOS_LIBS) $(LIB) -o KokkosCore_UnitTest_HWLOC
 
@@ -114,6 +123,9 @@ test-openmp: KokkosCore_UnitTest_OpenMP
 test-serial: KokkosCore_UnitTest_Serial
 	./KokkosCore_UnitTest_Serial
 	
+test-kalmar: KokkosCore_UnitTest_Kalmar
+	./KokkosCore_UnitTest_Kalmar
+
 test-qthread: KokkosCore_UnitTest_Qthread
 	./KokkosCore_UnitTest_Qthread
 

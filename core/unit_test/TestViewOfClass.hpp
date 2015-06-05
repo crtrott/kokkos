@@ -72,6 +72,7 @@ public:
     : member(){}
 #endif
 
+  KOKKOS_INLINE_FUNCTION
   ~NestedView()
 #if defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST )
     { Kokkos::atomic_decrement( & nested_view_count ); }

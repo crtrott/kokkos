@@ -170,9 +170,15 @@ private:
 
 
   template< class T >
-  inline static
+  KOKKOS_INLINE_FUNCTION static
   unsigned assign( const ViewDataManagement<T> & rhs , const PotentiallyManaged & )
-    { return rhs.m_traits | ( rhs.is_managed() && Kokkos::HostSpace::in_parallel() ? unsigned(Unmanaged) : 0u ); }
+    {
+#if ! defined( KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU )
+      return rhs.m_traits | ( rhs.is_managed() && Kokkos::HostSpace::in_parallel() ? unsigned(Unmanaged) : 0u );
+#else
+     return unsigned(Unmanaged) ;
+#endif
+    }
 
   template< class T >
   KOKKOS_INLINE_FUNCTION static
