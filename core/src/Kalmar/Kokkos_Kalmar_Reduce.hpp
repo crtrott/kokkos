@@ -23,13 +23,13 @@
 #define KOKKOS_KALMAR_AMP_REDUCE_INL
 
 
-#if 0
+#if 1
 // Issue: taking the address of a 'tile_static' variable
 // may not dereference properly ???
 #define REDUCE_WAVEFRONT_SIZE 256 //64
 #define _REDUCE_STEP(_LENGTH, _IDX, _W) \
 if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
-        ValueJoin::join( functor , & scratch[_IDX] , & scratch[ _IDX + _W ] ); \
+      ValueJoin::join( functor , & scratch[_IDX] , & scratch[ _IDX + _W ] ); \
 }\
     t_idx.barrier.wait();
 #else
@@ -58,6 +58,7 @@ void reduce_enqueue(
   const FunctorType & functor ,
   T& output_result )
 {
+  using ValueInit = Kokkos::Impl::FunctorValueInit< FunctorType , void > ;
   using ValueJoin = Kokkos::Impl::FunctorValueJoin< FunctorType , void > ;
 
   int max_ComputeUnits = 32;
@@ -74,28 +75,28 @@ void reduce_enqueue(
   if ( numTilesMax < numTiles ) numTiles = numTilesMax ;
 		
   // For storing tiles' contributions:
-  long * const terms  = new long[szElements];
+  //long * const terms  = new long[szElements];
   T * const result = new T[numTiles];
 
-  for ( int i =0 ; i <numTiles ; ++i ) result[i] = 99000 + i ;
+  //for ( int i =0 ; i <numTiles ; ++i ) result[i] = 99000 + i ;
 
   concurrency::extent< 1 > inputExtent(length);
   concurrency::tiled_extent< REDUCE_WAVEFRONT_SIZE >
     tiledExtentReduce = inputExtent.tile< REDUCE_WAVEFRONT_SIZE >();
 
   // AMP doesn't have APIs to get CU capacity. Launchable size is great though.
-
+/*
   printf("reduce_enqueue szElements %d tiledExtentReduce %d length %d\n"
         , szElements
         , tiledExtentReduce.tile_dim0
         , length
         );
-
+*/
   try
   {
     concurrency::parallel_for_each
       ( tiledExtentReduce
-      , [ = ]
+      , [ = , & functor]
         ( concurrency::tiled_index<REDUCE_WAVEFRONT_SIZE> t_idx ) restrict(amp)
         {
           tile_static T scratch[REDUCE_WAVEFRONT_SIZE];
@@ -106,7 +107,8 @@ void reduce_enqueue(
           //  Index of this member in its work group.
           unsigned int tileIndex = t_idx.local[0];
 
-          long accumulator = 0 ;
+          T tmp; 
+          T accumulator = ValueInit::init(functor,&tmp) ;
 
           // Shared memory within this tile:
           // ValueInit::init( m_functor , & accumulator );
@@ -116,18 +118,21 @@ void reduce_enqueue(
             // terms[gx] = accumulator ;
             // terms[gx] = 1 ;
             {
-#if 1
+#if 0
               // correct accumulator and terms
               accumulator += ( terms[gx] = gx + 1 );
 #elif 0
               // correct accumulator and terms
               terms[gx] = gx + 1 ;
               accumulator += terms[gx] ;
-#else
+#elif 0
               // error accumulator and correct terms
               terms[gx] = functor.value( gx );
               terms[gx] += 1 ;
               // accumulator += terms[gx] ;
+#else
+              functor(gx,accumulator);
+              //terms[gx] = accumulator;
 #endif
             }
           }
@@ -162,17 +167,16 @@ void reduce_enqueue(
 
        });
        // End of concurrency::parallel_for_each
-                
-       T acc = 0 ;
+       T acc = result[0];
 
        // ValueInit::init( m_functor , & acc );
 
-       for(int i = 0; i < szElements; ++i)
-           printf("terms[%d] = %ld\n",i,long(terms[i]));
+       //for(int i = 0; i < szElements; ++i)
+       //    printf("terms[%d] = %ld\n",i,long(terms[i]));
 
-       for(int i = 0; i < numTiles; ++i)
+       for(int i = 1; i < numTiles; ++i)
          {
-           printf("result[%d] = %ld\n",i,long(result[i]));
+           //printf("result[%d] = %ld\n",i,long(result[i]));
            ValueJoin::join( functor , & acc, result + i );
          }
 
