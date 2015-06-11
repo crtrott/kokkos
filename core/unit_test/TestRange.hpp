@@ -102,7 +102,11 @@ struct TestRange {
 
   KOKKOS_INLINE_FUNCTION
   void operator()( const VerifyInitTag & , const int i ) const
-    { if ( i != m_flags(i) ) { printf("TestRange::test_for error at %d != %d\n",i,m_flags(i)); } }
+    { if ( i != m_flags(i) ) { 
+#ifndef __KALMAR_ACCELERATOR__
+printf("TestRange::test_for error at %d != %d\n",i,m_flags(i));
+#endif
+ } }
 
   KOKKOS_INLINE_FUNCTION
   void operator()( const ResetTag & , const int i ) const
@@ -110,7 +114,11 @@ struct TestRange {
 
   KOKKOS_INLINE_FUNCTION
   void operator()( const VerifyResetTag & , const int i ) const
-    { if ( 2 * i != m_flags(i) ) { printf("TestRange::test_for error at %d != %d\n",i,m_flags(i)); } }
+    { if ( 2 * i != m_flags(i) ) { 
+#ifndef __KALMAR_ACCELERATOR__
+printf("TestRange::test_for error at %d != %d\n",i,m_flags(i));
+#endif
+} }
 
   //----------------------------------------
 
@@ -158,7 +166,9 @@ struct TestRange {
 
       if ( final ) {
         if ( update != (i*(i+1))/2 ) {
+#ifndef __KALMAR_ACCELERATOR__
           printf("TestRange::test_scan error %d : %d != %d\n",i,(i*(i+1))/2,m_flags(i));
+#endif
         }
       }
     }

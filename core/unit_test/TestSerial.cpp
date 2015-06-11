@@ -278,9 +278,11 @@ TEST_F( serial , atomics )
   ASSERT_TRUE( ( TestAtomic::Loop<float,Kokkos::Serial>(100,2) ) );
   ASSERT_TRUE( ( TestAtomic::Loop<float,Kokkos::Serial>(100,3) ) );
 
+#if 0
   ASSERT_TRUE( ( TestAtomic::Loop<Kokkos::complex<double> ,Kokkos::Serial>(100,1) ) );
   ASSERT_TRUE( ( TestAtomic::Loop<Kokkos::complex<double> ,Kokkos::Serial>(100,2) ) );
   ASSERT_TRUE( ( TestAtomic::Loop<Kokkos::complex<double> ,Kokkos::Serial>(100,3) ) );
+#endif
 }
 
 //----------------------------------------------------------------------------

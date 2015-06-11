@@ -83,9 +83,11 @@ struct TestTeamPolicy {
       const int tid = member.team_rank() + member.team_size() * member.league_rank();
 
       if ( tid != m_flags( member.team_rank() , member.league_rank() ) ) {
+#ifndef __KALMAR_ACCELERATOR__
         printf("TestTeamPolicy member(%d,%d) error %d != %d\n"
               , member.league_rank() , member.team_rank()
               , tid , m_flags( member.team_rank() , member.league_rank() ) );
+#endif
       }
     }
 
@@ -295,10 +297,12 @@ public:
     const int long m = ind.team_reduce( (long int) ( ind.league_rank() + ind.team_rank() ) , JoinMax() );
 
     if ( m != ind.league_rank() + ( ind.team_size() - 1 ) ) {
+#ifndef __KALMAR_ACCELERATOR__
       printf("ScanTeamFunctor[%d.%d of %d.%d] reduce_max_answer(%ld) != reduce_max(%ld)\n"
             , ind.league_rank(), ind.team_rank()
             , ind.league_size(), ind.team_size()
             , (long int)(ind.league_rank() + ( ind.team_size() - 1 )) , m );
+#endif
     }
 
     // Scan:
@@ -313,10 +317,12 @@ public:
       ind.team_scan( ind.league_rank() + 1 + ind.team_rank() + 1 );
 
     if ( answer != result || answer != result2 ) {
+#ifndef __KALMAR_ACCELERATOR__
       printf("ScanTeamFunctor[%d.%d of %d.%d] answer(%ld) != scan_first(%ld) or scan_second(%ld)\n",
              ind.league_rank(), ind.team_rank(),
              ind.league_size(), ind.team_size(),
              answer,result,result2);
+#endif
       error = 1 ;
     }
 
@@ -408,8 +414,10 @@ struct SharedTeamFunctor {
 
     if ((shared_A.ptr_on_device () == NULL && SHARED_COUNT > 0) ||
         (shared_B.ptr_on_device () == NULL && SHARED_COUNT > 0)) {
+#ifndef __KALMAR_ACCELERATOR__
       printf ("Failed to allocate shared memory of size %lu\n",
               static_cast<unsigned long> (SHARED_COUNT));
+#endif
       ++update; // failure to allocate is an error
     }
     else {

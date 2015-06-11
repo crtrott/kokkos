@@ -166,8 +166,10 @@ struct functor_team_for {
     shared_int values = shared_int (team.team_shmem (), shmemSize);
 
     if (values.ptr_on_device () == NULL || values.dimension_0 () < shmemSize) {
+#ifndef __KALMAR_ACCELERATOR__
       printf ("FAILED to allocate shared memory of size %u\n",
               static_cast<unsigned int> (shmemSize));
+#endif
     }
     else {
 
@@ -192,9 +194,11 @@ struct functor_team_for {
               value += values(i);
             }
             if (test != value) {
+#ifndef __KALMAR_ACCELERATOR__
               printf ("FAILED team_parallel_for %i %i %f %f\n",
                       team.league_rank (), team.team_rank (),
                       static_cast<double> (test), static_cast<double> (value));
+#endif
               flag() = 1;
             }
       });
@@ -228,9 +232,11 @@ struct functor_team_reduce {
          }
          if (test != value) {
            if(team.league_rank() == 0)
+#ifndef __KALMAR_ACCELERATOR__
            printf ("FAILED team_parallel_reduce %i %i %f %f %lu\n",
              team.league_rank (), team.team_rank (),
              static_cast<double> (test), static_cast<double> (value),sizeof(Scalar));
+#endif
               flag() = 1;
          }
     });
@@ -267,9 +273,11 @@ struct functor_team_reduce_join {
            test += i - team.league_rank () + team.league_size () + team.team_size ();
          }
          if (test != value) {
+#ifndef __KALMAR_ACCELERATOR__
            printf ("FAILED team_vector_parallel_reduce_join %i %i %f %f\n",
              team.league_rank (), team.team_rank (),
              static_cast<double> (test), static_cast<double> (value));
+#endif
               flag() = 1;
          }
     });
@@ -297,8 +305,10 @@ struct functor_team_vector_for {
     shared_int values = shared_int (team.team_shmem (), shmemSize);
 
     if (values.ptr_on_device () == NULL || values.dimension_0 () < shmemSize) {
+#ifndef __KALMAR_ACCELERATOR__
       printf ("FAILED to allocate shared memory of size %u\n",
               static_cast<unsigned int> (shmemSize));
+#endif
     }
     else {
       Kokkos::single(Kokkos::PerThread(team),[&] () {
@@ -322,9 +332,11 @@ struct functor_team_vector_for {
           value += values(i);
         }
         if (test != value) {
+#ifndef __KALMAR_ACCELERATOR__
           printf ("FAILED team_vector_parallel_for %i %i %f %f\n",
                   team.league_rank (), team.team_rank (),
                   static_cast<double> (test), static_cast<double> (value));
+#endif
           flag() = 1;
         }
       });
@@ -358,9 +370,11 @@ struct functor_team_vector_reduce {
       }
       if (test != value) {
         if(team.league_rank() == 0)
+#ifndef __KALMAR_ACCELERATOR__
         printf ("FAILED team_vector_parallel_reduce %i %i %f %f %lu\n",
           team.league_rank (), team.team_rank (),
           static_cast<double> (test), static_cast<double> (value),sizeof(Scalar));
+#endif
            flag() = 1;
       }
     });
@@ -396,9 +410,11 @@ struct functor_team_vector_reduce_join {
          test += i - team.league_rank () + team.league_size () + team.team_size ();
       }
       if (test != value) {
+#ifndef __KALMAR_ACCELERATOR__
         printf ("FAILED team_vector_parallel_reduce_join %i %i %f %f\n",
           team.league_rank (), team.team_rank (),
           static_cast<double> (test), static_cast<double> (value));
+#endif
         flag() = 1;
       }
     });
@@ -435,7 +451,9 @@ struct functor_vec_single {
     },value2);
 
     if(value2!=(value*13)) {
+#ifndef __KALMAR_ACCELERATOR__
       printf("FAILED vector_single broadcast %i %i %f %f\n",team.league_rank(),team.team_rank(),(double) value2,(double) value);
+#endif
       flag()=1;
     }
   }
@@ -460,8 +478,10 @@ struct functor_vec_for {
 
     if (values.ptr_on_device () == NULL ||
         values.dimension_0() < (unsigned) team.team_size() * 13) {
+#ifndef __KALMAR_ACCELERATOR__
       printf ("FAILED to allocate memory of size %i\n",
               static_cast<int> (team.team_size () * 13));
+#endif
       flag() = 1;
     }
     else {
@@ -477,9 +497,11 @@ struct functor_vec_for {
           value += values(13*team.team_rank() + i);
         }
         if (test != value) {
+#ifndef __KALMAR_ACCELERATOR__
           printf ("FAILED vector_par_for %i %i %f %f\n",
                   team.league_rank (), team.team_rank (),
                   static_cast<double> (test), static_cast<double> (value));
+#endif
           flag() = 1;
         }
       });
@@ -509,7 +531,9 @@ struct functor_vec_red {
         test+=i;
       }
       if(test!=value) {
+#ifndef __KALMAR_ACCELERATOR__
         printf("FAILED vector_par_reduce %i %i %f %f\n",team.league_rank(),team.team_rank(),(double) test,(double) value);
+#endif
         flag()=1;
       }
     });
@@ -540,7 +564,9 @@ struct functor_vec_red_join {
         test*=i;
       }
       if(test!=value) {
+#ifndef __KALMAR_ACCELERATOR__
         printf("FAILED vector_par_reduce_join %i %i %f %f\n",team.league_rank(),team.team_rank(),(double) test,(double) value);
+#endif
         flag()=1;
       }
     });
@@ -565,7 +591,9 @@ struct functor_vec_scan {
           test+=k;
         }
         if(test!=val) {
+#ifndef __KALMAR_ACCELERATOR__
           printf("FAILED vector_par_scan %i %i %f %f\n",team.league_rank(),team.team_rank(),(double) test,(double) val);
+#endif
           flag()=1;
         }
       }
