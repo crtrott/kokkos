@@ -183,6 +183,7 @@ TEST_F( kalmar, team_double_reduce) {
 TEST_F( kalmar, team_shared_request) {
   TestSharedTeam< Kokkos::Kalmar >();
 }
+#endif
 
 
 TEST_F( kalmar , atomics )
@@ -224,6 +225,7 @@ TEST_F( kalmar , atomics )
 #endif
 }
 
+#if 0
 TEST_F( kalmar , view_remap )
 {
   enum { N0 = 3 , N1 = 2 , N2 = 8 , N3 = 9 };

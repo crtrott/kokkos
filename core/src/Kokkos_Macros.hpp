@@ -405,7 +405,7 @@
 
 #elif	defined( KOKKOS_HAVE_KALMAR ) && \
 	defined( __KALMAR_CC__ ) && \
-	defined( __GPU__ )
+	defined( __KALMAR_ACCELERATOR__ )
 
 #define KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_KALMAR_GPU
 

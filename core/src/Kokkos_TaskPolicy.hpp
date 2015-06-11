@@ -148,6 +148,7 @@ public:
 
   //----------------------------------------
 
+  KOKKOS_INLINE_FUNCTION
   explicit
   Future( TaskRoot * task )
     : m_task(0)

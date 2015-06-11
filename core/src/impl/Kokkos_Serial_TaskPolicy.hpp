@@ -153,7 +153,7 @@ protected :
 public:
 
   template< typename ResultType >
-  inline static
+  KOKKOS_INLINE_FUNCTION static
   TaskMember * verify_type( TaskMember * t )
     {
       enum { check_type = ! Kokkos::Impl::is_same< ResultType , void >::value };

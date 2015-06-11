@@ -174,6 +174,7 @@ unsigned long int atomic_fetch_add( volatile unsigned long int * const dest , co
 
 #endif
 
+#if 0
 template < typename T >
 KOKKOS_INLINE_FUNCTION
 T atomic_fetch_add( volatile T * const dest ,
@@ -232,6 +233,7 @@ T atomic_fetch_add( volatile T * const dest ,
 
   return oldval.t ;
 }
+#endif
 
 #ifdef KOKKOS_ENABLE_ASM
 template < typename T >
@@ -312,13 +314,13 @@ void atomic_add(volatile T * const dest, const T src) {
 template<typename T>
 KOKKOS_INLINE_FUNCTION
 void atomic_increment(volatile T* a) {
-  Kokkos::atomic_fetch_add(a,1);
+  Kokkos::atomic_fetch_add(a,(T)1);
 }
 
 template<typename T>
 KOKKOS_INLINE_FUNCTION
 void atomic_decrement(volatile T* a) {
-  Kokkos::atomic_fetch_add(a,-1);
+  Kokkos::atomic_fetch_add(a,(T)-1);
 }
 
 }

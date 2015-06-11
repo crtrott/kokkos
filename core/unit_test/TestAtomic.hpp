@@ -333,8 +333,10 @@ template<class T, class DeviceType >
 T LoopVariant(int loop, int test) {
   switch (test) {
     case 1: return AddLoop<T,DeviceType>(loop);
+#if 0
     case 2: return CASLoop<T,DeviceType>(loop);
     case 3: return ExchLoop<T,DeviceType>(loop);
+#endif
   }
   return 0;
 }
@@ -343,8 +345,10 @@ template<class T>
 T LoopVariantSerial(int loop, int test) {
   switch (test) {
     case 1: return AddLoopSerial<T>(loop);
+#if 0
     case 2: return CASLoopSerial<T>(loop);
     case 3: return ExchLoopSerial<T>(loop);
+#endif
   }
   return 0;
 }

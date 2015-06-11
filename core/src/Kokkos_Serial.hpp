@@ -185,8 +185,8 @@ struct VerifyExecutionCanAccessMemorySpace
   >
 {
   enum { value = true };
-  inline static void verify( void ) { }
-  inline static void verify( const void * ) { }
+  KOKKOS_INLINE_FUNCTION static void verify( void ) { }
+  KOKKOS_INLINE_FUNCTION static void verify( const void * ) { }
 };
 
 namespace SerialImpl {
