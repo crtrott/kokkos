@@ -130,10 +130,24 @@ private:
   typename Policy::member_type m_offset ;
 
 public:
+  template<typename Tag>
+  KOKKOS_INLINE_FUNCTION
+  static
+  void driver(const FunctorType& functor,
+              typename std::enable_if< std::is_same<Tag, void>::value,
+                                       typename Policy::member_type const & >::type index) { functor(index); }
+
+  template<typename Tag>
+  KOKKOS_INLINE_FUNCTION
+  static
+  void driver(const FunctorType& functor,
+              typename std::enable_if< !std::is_same<Tag, void>::value,
+                                       typename Policy::member_type const & >::type index) { functor(Tag(), index); }
+
   KOKKOS_INLINE_FUNCTION
   void operator()( const concurrency::index<1> & idx ) const
     {
-       m_functor( idx[0] + m_offset);
+       ParallelFor::template driver<typename Policy::work_tag> (m_functor, idx[0] + m_offset);
     }
 
   inline
