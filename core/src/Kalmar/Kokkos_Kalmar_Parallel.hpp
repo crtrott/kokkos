@@ -126,16 +126,15 @@ private:
 
   typedef Kokkos::RangePolicy< Arg0 , Arg1 , Arg2 , Kokkos::Kalmar > Policy ;
 
-  FunctorType m_functor ;
+  const FunctorType& m_functor ;
   typename Policy::member_type m_offset ;
 
-  inline
-  void operator()( const concurrency::index<1> & idx ) const restrict(amp)
+public:
+  KOKKOS_INLINE_FUNCTION
+  void operator()( const concurrency::index<1> & idx ) const
     {
        m_functor( idx[0] + m_offset);
     }
-
-public:
 
   inline
   ParallelFor( const FunctorType & functor
@@ -144,11 +143,16 @@ public:
        m_offset( policy.begin() )
     {
 
+#if 0
       auto make_lambda = [this]( const concurrency::index<1> & idx ) restrict(amp) {
         this->operator() (idx);
       };
       concurrency::parallel_for_each( concurrency::extent<1>(
          policy.end()-policy.begin()) , make_lambda);
+#else
+      concurrency::parallel_for_each( concurrency::extent<1>(
+         policy.end()-policy.begin()) , *this);
+#endif
 
     }
 };
@@ -160,13 +164,14 @@ class ParallelFor< FunctorType
                  , Kokkos::TeamPolicy< Arg0 , Arg1 , Kokkos::Kalmar > >
 {
   using Policy = Kokkos::TeamPolicy< Arg0 , Arg1 , Kokkos::Kalmar > ;
-  FunctorType m_functor ;
+  const FunctorType& m_functor ;
 public:
   inline
   ParallelFor( const FunctorType & functor
              , const Policy      & policy )
     :m_functor(functor)
     {
+#if 0
       auto make_lambda =
         [&]( const concurrency::tiled_index< 256 > & idx ) restrict(amp)
       {
@@ -182,6 +187,15 @@ public:
         flat_extent.tile< 256 >();
 
       concurrency::parallel_for_each( team_extent , make_lambda );
+#else
+      concurrency::extent< 1 >
+        flat_extent( policy.league_size() * 256 );
+
+      concurrency::tiled_extent< 256 > team_extent =
+        flat_extent.tile< 256 >();
+
+      concurrency::parallel_for_each( team_extent , *this );
+#endif
     }
 };
 
