@@ -263,11 +263,11 @@ ifeq ($(KOKKOS_INTERNAL_USE_KALMAR), 1)
         KOKKOS_SRC += $(wildcard $(KOKKOS_PATH)/core/src/Kalmar/*.cpp)
         KOKKOS_HEADERS += $(wildcard $(KOKKOS_PATH)/core/src/Kalmar/*.hpp)
         # use Kalmar debian package
-        KOKKOS_CXXFLAGS += `/opt/kalmar/bin/clamp-config --build --cxxflags`
-        KOKKOS_LDFLAGS += `/opt/kalmar/bin/clamp-config --ldflags`
+        #KOKKOS_CXXFLAGS += `/opt/kalmar/bin/clamp-config --cxxflags`
+        #KOKKOS_LDFLAGS += `/opt/kalmar/bin/clamp-config --ldflags`
         # use Kalmar built from source
-        #KOKKOS_CXXFLAGS += ` ~/cppamp35/build/build/Release/bin/clamp-config --build --cxxflags`
-        #KOKKOS_LDFLAGS += ` ~/cppamp35/build/build/Release/bin/clamp-config --ldflags`
+        KOKKOS_CXXFLAGS += ` ~/cppamp35/build/build/Release/bin/clamp-config --build --cxxflags`
+        KOKKOS_LDFLAGS += ` ~/cppamp35/build/build/Release/bin/clamp-config --build --ldflags`
         # disable lowering to OpenCL
         KOKKOS_LDFLAGS += -Xlinker --disable-opencl
 endif
