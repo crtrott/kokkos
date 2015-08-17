@@ -1,4 +1,4 @@
-#include <amp.h>
+#include <hc.hpp>
 #include <hsa_atomic.h>
 
 //#ifdef KOKKOS_USE_ATOMICS_KALMAR_GPU

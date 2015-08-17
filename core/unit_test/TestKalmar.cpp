@@ -135,8 +135,6 @@ TEST_F( kalmar, view_subview_right_3 ) {
   TestViewSubview::test_right_3< Kokkos::Kalmar >();
 }
 
-
-
 TEST_F( kalmar , range_tag )
 {
   TestRange< Kokkos::Kalmar >::test_for(1000);
@@ -184,7 +182,6 @@ TEST_F( kalmar, team_shared_request) {
   TestSharedTeam< Kokkos::Kalmar >();
 }
 #endif
-
 
 TEST_F( kalmar , atomics )
 {

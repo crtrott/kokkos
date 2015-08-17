@@ -55,7 +55,7 @@ namespace Kokkos {
 
     KOKKOS_INLINE_FUNCTION
     kalmar_team_member_type( const TeamPolicy & arg_policy
-               , const concurrency::tiled_index< TEAM_SIZE > & arg_idx )
+               , const hc::tiled_index< 1 > & arg_idx )
       : m_league_size( arg_policy.league_size() )
       , m_league_rank( arg_idx.tile[0]  )
       , m_team_rank( arg_idx.local[0] )
@@ -96,7 +96,7 @@ public:
 
     KOKKOS_INLINE_FUNCTION
     member_type( const TeamPolicy & arg_policy
-               , const concurrency::tiled_index< TEAM_SIZE > & arg_idx )
+               , const hc::tiled_index< TEAM_SIZE > & arg_idx )
       : m_league_size( arg_policy.league_size() )
       , m_league_rank( arg_idx.tile[0]  )
       , m_team_rank( arg_idx.local[0] )
@@ -145,7 +145,7 @@ public:
                                        typename Policy::member_type const & >::type index) { functor(Tag(), index); }
 
   KOKKOS_INLINE_FUNCTION
-  void operator()( const concurrency::index<1> & idx ) const
+  void operator()( const hc::index<1> & idx ) const
     {
        ParallelFor::template driver<typename Policy::work_tag> (m_functor, idx[0] + m_offset);
     }
@@ -158,14 +158,15 @@ public:
     {
 
 #if 0
-      auto make_lambda = [this]( const concurrency::index<1> & idx ) restrict(amp) {
+      auto make_lambda = [this]( const hc::index<1> & idx ) restrict(amp) {
         this->operator() (idx);
       };
-      concurrency::parallel_for_each( concurrency::extent<1>(
+      hc::parallel_for_each( hc::extent<1>(
          policy.end()-policy.begin()) , make_lambda);
 #else
-      concurrency::parallel_for_each( concurrency::extent<1>(
+      hc::completion_future fut = hc::parallel_for_each( hc::extent<1>(
          policy.end()-policy.begin()) , *this);
+      fut.wait();
 #endif
 
     }
@@ -187,28 +188,29 @@ public:
     {
 #if 0
       auto make_lambda =
-        [&]( const concurrency::tiled_index< 256 > & idx ) restrict(amp)
+        [&]( const hc::tiled_index< 1 > & idx ) restrict(amp)
       {
         using member_type = typename Policy::member_type ;
         
         this->m_functor( kalmar_team_member_type( policy , idx ) );
       };
 
-      concurrency::extent< 1 >
+      hc::extent< 1 >
         flat_extent( policy.league_size() * 256 );
 
-      concurrency::tiled_extent< 256 > team_extent =
-        flat_extent.tile< 256 >();
+      hc::tiled_extent< 1 > team_extent =
+        flat_extent.tile(256);
 
-      concurrency::parallel_for_each( team_extent , make_lambda );
+      hc::parallel_for_each( team_extent , make_lambda );
 #else
-      concurrency::extent< 1 >
+      hc::extent< 1 >
         flat_extent( policy.league_size() * 256 );
 
-      concurrency::tiled_extent< 256 > team_extent =
-        flat_extent.tile< 256 >();
+      hc::tiled_extent< 1 > team_extent =
+        flat_extent.tile(256);
 
-      concurrency::parallel_for_each( team_extent , *this );
+      hc::completion_future fut = hc::parallel_for_each( team_extent , *this );
+      fut.wait();
 #endif
     }
 };

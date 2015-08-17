@@ -80,9 +80,9 @@ void reduce_enqueue(
 
   //for ( int i =0 ; i <numTiles ; ++i ) result[i] = 99000 + i ;
 
-  concurrency::extent< 1 > inputExtent(length);
-  concurrency::tiled_extent< REDUCE_WAVEFRONT_SIZE >
-    tiledExtentReduce = inputExtent.tile< REDUCE_WAVEFRONT_SIZE >();
+  hc::extent< 1 > inputExtent(length);
+  hc::tiled_extent< 1 >
+    tiledExtentReduce = inputExtent.tile(REDUCE_WAVEFRONT_SIZE);
 
   // AMP doesn't have APIs to get CU capacity. Launchable size is great though.
 /*
@@ -94,10 +94,10 @@ void reduce_enqueue(
 */
   try
   {
-    concurrency::parallel_for_each
+    hc::completion_future fut = hc::parallel_for_each
       ( tiledExtentReduce
       , [ = , & functor]
-        ( concurrency::tiled_index<REDUCE_WAVEFRONT_SIZE> t_idx ) restrict(amp)
+        ( hc::tiled_index<1> t_idx ) restrict(amp)
         {
           tile_static T scratch[REDUCE_WAVEFRONT_SIZE];
 
@@ -166,7 +166,8 @@ void reduce_enqueue(
           }
 
        });
-       // End of concurrency::parallel_for_each
+       // End of hc::parallel_for_each
+       fut.wait();
        T acc = result[0];
 
        // ValueInit::init( m_functor , & acc );
