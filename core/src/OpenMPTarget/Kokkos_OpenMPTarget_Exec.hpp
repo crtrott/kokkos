@@ -1188,6 +1188,7 @@ KOKKOS_INLINE_FUNCTION void parallel_scan(
 
   const auto start     = loop_bounds.start;
   const auto end       = loop_bounds.end;
+  // Note this thing is called .member in the CUDA specialization of TeamThreadRangeBoundariesStruct
   auto& member         = loop_bounds.team;
   const auto team_size = member.team_size();
   const auto team_rank = member.team_rank();
