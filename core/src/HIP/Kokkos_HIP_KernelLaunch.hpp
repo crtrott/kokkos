@@ -201,11 +201,26 @@ struct HIPParallelLaunch<DriverType, Kokkos::LaunchBounds<0, 0>,
       // Invoke the driver function on the device
 
       // FIXME_HIP -- see note about struct copy by value above
-      DriverType *d_driver;
+      static DriverType *d_driver = NULL;
+      static DriverType *h_driver = NULL;
+#ifdef KOKKOS_IMPL_HIP_KERNEL_LAUNCH_STATIC
+      if(d_driver==NULL)
+#endif
       HIP_SAFE_CALL(hipMalloc(&d_driver, sizeof(DriverType)));
+#ifdef KOKKOS_IMPL_HIP_KERNEL_LAUNCH_HOST_PINNED
+#ifdef KOKKOS_IMPL_HIP_KERNEL_LAUNCH_STATIC
+      if(h_driver==NULL)
+#endif
+      HIP_SAFE_CALL(hipHostMalloc(&h_driver, sizeof(DriverType)));
+      new (h_driver) DriverType(driver);
+      HIP_SAFE_CALL(hipMemcpyAsync(d_driver, h_driver, sizeof(DriverType),
+                                   hipMemcpyHostToDevice,
+                                   hip_instance->m_stream));
+#else
       HIP_SAFE_CALL(hipMemcpyAsync(d_driver, &driver, sizeof(DriverType),
                                    hipMemcpyHostToDevice,
                                    hip_instance->m_stream));
+#endif
       hip_parallel_launch_local_memory<DriverType, 1024, 1>
           <<<grid, block, shmem, hip_instance->m_stream>>>(d_driver);
 
@@ -213,7 +228,13 @@ struct HIPParallelLaunch<DriverType, Kokkos::LaunchBounds<0, 0>,
       HIP_SAFE_CALL(hipGetLastError());
       hip_instance->fence();
 #endif
+
+#ifndef KOKKOS_IMPL_HIP_KERNEL_LAUNCH_STATIC
+#ifdef KOKKOS_IMPL_HIP_KERNEL_LAUNCH_HOST_PINNED
+      HIP_SAFE_CALL(hipHostFree(h_driver));
+#endif
       HIP_SAFE_CALL(hipFree(d_driver));
+#endif
     }
   }
 
