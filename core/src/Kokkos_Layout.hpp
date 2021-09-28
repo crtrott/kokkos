@@ -205,19 +205,9 @@ struct LayoutStride {
       : dimension{N0, N1, N2, N3, N4, N5, N6, N7}, stride{S0, S1, S2, S3,
                                                           S4, S5, S6, S7} {}
 
-  template <int R, ptrdiff_t... Args>
-  struct get_stride_args {
-    using type = typename get_stride_args<R - 1, -1, Args...>::type;
-  };
-
-  template <ptrdiff_t... Args>
-  struct get_stride_args<0, Args...> {
-    using type = std::experimental::layout_stride<Args...>;
-  };
-
   template <class Extents>
   using mapping =
-      typename get_stride_args<Extents::rank()>::type::template mapping<Extents>;
+      typename std::experimental::layout_stride::mapping<Extents>;
 };
 
 // ===================================================================================
