@@ -2281,6 +2281,7 @@ struct TestSubviewStaticSizes {
   TestSubviewStaticSizes() : a(Kokkos::view_alloc("a"), 20), b("b") {}
 };
 
+#ifdef KOKKOS_USE_LEGACY_VIEW
 template <class Space>
 struct TestExtentsStaticTests {
   using test1 = typename static_expect_same<
@@ -2309,7 +2310,7 @@ struct TestExtentsStaticTests {
       /* actual */
       typename Kokkos::Impl::ParseViewExtents<double>::type>::type;
 };
-
+#endif
 }  // namespace TestViewSubview
 
 #endif
