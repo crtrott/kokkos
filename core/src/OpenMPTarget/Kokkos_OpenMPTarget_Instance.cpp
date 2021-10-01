@@ -127,8 +127,14 @@ OpenMPTargetInternal* OpenMPTargetInternal::impl_singleton() {
 
 }  // Namespace Impl
 
-OpenMPTarget::OpenMPTarget()
-    : m_space_instance(Impl::OpenMPTargetInternal::impl_singleton()) {}
+OpenMPTarget::OpenMPTarget(bool use_singleton) {
+  if(use_singleton) {
+    m_space_instance = Impl::OpenMPTargetInternal::impl_singleton();
+  } else {
+    m_space_instance = new Impl::OpenMPTargetInternal;
+    m_space_instance->impl_initialize();
+  }
+}
 
 const char* OpenMPTarget::name() {
   return Impl::OpenMPTargetInternal::impl_singleton()->name();

@@ -116,7 +116,7 @@ class OpenMPTarget {
     return m_space_instance;
   }
 
-  OpenMPTarget();
+  OpenMPTarget(bool use_singleton = true);
   uint32_t impl_instance_id() const noexcept;
 
  private:
@@ -153,6 +153,7 @@ class OpenMPTargetSpaceInitializer : public ExecSpaceInitializerBase {
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
 
+#include <OpenMPTarget/Kokkos_OpenMPTarget_Instance.hpp>
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Exec.hpp>
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Parallel.hpp>
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Parallel_MDRange.hpp>

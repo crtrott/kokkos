@@ -55,11 +55,11 @@ enum class openmp_fence_is_static { yes, no };
 
 class OpenMPTargetInternal {
  private:
-  OpenMPTargetInternal()                            = default;
   OpenMPTargetInternal(const OpenMPTargetInternal&) = default;
   OpenMPTargetInternal& operator=(const OpenMPTargetInternal&) = default;
 
  public:
+  OpenMPTargetInternal()                            = default;
   void fence(openmp_fence_is_static is_static = openmp_fence_is_static::no);
   void fence(const std::string& name,
              openmp_fence_is_static is_static = openmp_fence_is_static::no);
@@ -88,7 +88,38 @@ class OpenMPTargetInternal {
   uint32_t m_instance_id = Kokkos::Tools::Experimental::Impl::idForInstance<
       Kokkos::Experimental::OpenMPTarget>(reinterpret_cast<uintptr_t>(this));
 };
-}  // Namespace Impl
+
+// Create separate instances for OpenMPTarget
+inline void create_OpenMPTarget_instances(std::vector<OpenMPTarget>& instances) {
+  for (int s = 0; s < int(instances.size()); s++) {
+    instances[s] = OpenMPTarget(false /* don't get singleton */);
+  }
+}
+}  // namespace Impl
+
+template <class... Args>
+std::vector<OpenMPTarget> partition_space(const OpenMPTarget&, Args...) {
+#ifdef __cpp_fold_expressions
+  static_assert(
+      (... && std::is_arithmetic_v<Args>),
+      "Kokkos Error: partitioning arguments must be integers or floats");
+#endif
+  std::vector<OpenMPTarget> instances(sizeof...(Args));
+  Impl::create_OpenMPTarget_instances(instances);
+  return instances;
+}
+
+template <class T>
+std::vector<OpenMPTarget> partition_space(const OpenMPTarget&, std::vector<T>& weights) {
+  static_assert(
+      std::is_arithmetic<T>::value,
+      "Kokkos Error: partitioning arguments must be integers or floats");
+
+  std::vector<OpenMPTarget> instances(weights.size());
+  Impl::create_OpenMPTarget_instances(instances);
+  return instances;
+}
+
 }  // Namespace Experimental
 }  // Namespace Kokkos
 

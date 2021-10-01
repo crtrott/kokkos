@@ -294,6 +294,7 @@ std::vector<ExecSpace> partition_space(ExecSpace space, Args...) {
       (... && std::is_arithmetic_v<Args>),
       "Kokkos Error: partitioning arguments must be integers or floats");
 #endif
+  printf("Default Partition\n");
   std::vector<ExecSpace> instances(sizeof...(Args));
   for (int s = 0; s < int(sizeof...(Args)); s++) instances[s] = space;
   return instances;
