@@ -1393,7 +1393,6 @@ endif
 
 # Set KokkosExtraLibs and add -lkokkos to link line
 KOKKOS_EXTRA_LIBS := ${KOKKOS_LIBS}
-KOKKOS_LIBS := -lkokkos ${KOKKOS_LIBS}
 
 # Setting up dependencies.
 
@@ -1406,6 +1405,7 @@ KOKKOS_OBJ_LINK = $(notdir $(KOKKOS_OBJ))
 
 include $(KOKKOS_PATH)/Makefile.targets
 
+KOKKOS_LIBS := ${KOKKOS_OBJ_LINK} -ldl
 kokkos-clean:
 	rm -f $(KOKKOS_OBJ_LINK) KokkosCore_config.h KokkosCore_config.tmp libkokkos.a KokkosCore_Config_SetupBackend.hpp \
 	KokkosCore_Config_FwdBackend.hpp KokkosCore_Config_DeclareBackend.hpp KokkosCore_Config_DeclareBackend.tmp \
@@ -1418,7 +1418,7 @@ libkokkos.a: $(KOKKOS_OBJ_LINK) $(KOKKOS_SRC) $(KOKKOS_HEADERS)
 print-cxx-flags: 
 	echo "$(KOKKOS_CXXFLAGS)"
 
-KOKKOS_LINK_DEPENDS=libkokkos.a
+KOKKOS_LINK_DEPENDS=${KOKKOS_OBJ_LINK}
 
 #we have carefully separated LDFLAGS from LIBS and LIBDIRS
 #we have also separated CPPFLAGS from CXXFLAGS

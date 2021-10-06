@@ -90,8 +90,8 @@ class OpenMPTarget {
 
   inline static bool in_parallel() { return omp_in_parallel(); }
 
-  static void fence();
-  static void fence(const std::string&);
+  void fence();
+  void fence(const std::string&);
 
   static void impl_static_fence();
   static void impl_static_fence(const std::string&);

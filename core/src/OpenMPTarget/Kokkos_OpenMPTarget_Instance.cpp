@@ -86,6 +86,11 @@ void OpenMPTargetInternal::fence(const std::string& name,
             GlobalDeviceSynchronization,
         [&]() {});
   }
+  printf("Fence: %p\n",this);
+  #pragma omp target teams distribute depend(inout: this[0])
+  for(int i=0; i<1; i++) {
+    printf("Fence Device\n");
+  }
 }
 int OpenMPTargetInternal::concurrency() { return 128000; }
 const char* OpenMPTargetInternal::name() { return "OpenMPTarget"; }
@@ -124,6 +129,13 @@ OpenMPTargetInternal* OpenMPTargetInternal::impl_singleton() {
   static OpenMPTargetInternal self;
   return &self;
 }
+char* OpenMPTargetInternal::kernel_buffer(uint32_t size) {
+  if(size>m_kernel_buffer_size) {
+    if(m_kernel_buffer != nullptr) Kokkos::kokkos_free<Kokkos::HostSpace>(m_kernel_buffer);
+    m_kernel_buffer = (char*)Kokkos::kokkos_malloc<Kokkos::HostSpace>("OpenMPTargetInternal::kernel_buffer", size);
+  }
+  return m_kernel_buffer;
+}
 
 }  // Namespace Impl
 
@@ -152,11 +164,11 @@ int OpenMPTarget::concurrency() {
   return Impl::OpenMPTargetInternal::impl_singleton()->concurrency();
 }
 void OpenMPTarget::fence() {
-  Impl::OpenMPTargetInternal::impl_singleton()->fence(
+  impl_internal_space_instance()->fence(
       "Kokkos::OpenMPTarget::fence: Unnamed Instance Fence");
 }
 void OpenMPTarget::fence(const std::string& name) {
-  Impl::OpenMPTargetInternal::impl_singleton()->fence(name);
+  impl_internal_space_instance()->fence(name);
 }
 void OpenMPTarget::impl_static_fence() {
   Impl::OpenMPTargetInternal::impl_singleton()->fence(

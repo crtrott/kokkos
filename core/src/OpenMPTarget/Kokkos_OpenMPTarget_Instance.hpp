@@ -83,8 +83,12 @@ class OpenMPTargetInternal {
 
   static OpenMPTargetInternal* impl_singleton();
 
+  char* kernel_buffer(uint32_t size);
+
  private:
   bool m_is_initialized  = false;
+  char* m_kernel_buffer = nullptr;
+  uint32_t m_kernel_buffer_size = 0;
   uint32_t m_instance_id = Kokkos::Tools::Experimental::Impl::idForInstance<
       Kokkos::Experimental::OpenMPTarget>(reinterpret_cast<uintptr_t>(this));
 };

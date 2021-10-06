@@ -79,10 +79,12 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>,
     const auto end   = m_policy.end();
 
     if (end <= begin) return;
-
-    FunctorType a_functor(m_functor);
-
-#pragma omp target teams distribute parallel for map(to : a_functor)
+    FunctorType* a_functor_buffer = (FunctorType*)m_policy.space().impl_internal_space_instance()->kernel_buffer(sizeof(FunctorType));
+    new (a_functor_buffer) FunctorType(m_functor);
+    FunctorType& a_functor = *a_functor_buffer;
+    auto dep_ptr = m_policy.space().impl_internal_space_instance();
+    printf("Dispatch %p\n",dep_ptr);
+#pragma omp target teams distribute parallel for map(to : a_functor) nowait depend(inout: dep_ptr[0])
     for (auto i = begin; i < end; ++i) {
       if constexpr (std::is_same<TagType, void>::value) {
         a_functor(i);
