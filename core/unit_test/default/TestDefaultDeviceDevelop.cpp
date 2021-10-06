@@ -48,11 +48,34 @@
 #include <Kokkos_Core.hpp>
 
 #include <default/TestDefaultDeviceType_Category.hpp>
-
+#include <TestAtomicOperations.hpp>
 namespace Test {
 
+TEST(TEST_CATEGORY, atomic_operations_complexdouble) {
+  const int start = 1;  // Avoid zero for division.
+  const int end   = 11;
+  for (int i = start; i < end; ++i) {
+    printf("%i\n",i);
+    ASSERT_TRUE(
+        (TestAtomicOperations::MulAtomicTest<Kokkos::complex<double>,
+                                             TEST_EXECSPACE>(start, end - i)));
+  }
+}
+
+enum { N0 = 5};
 namespace stdex = std::experimental;
 TEST(defaultdevicetype, development_test) {
+      using ext_t = Kokkos::Impl::ExtractExtents<double[1][2][3]>;
+      printf("Extents: %s\n",typeid(typename ext_t::extents_type).name());
+      using ext2_t = Kokkos::Impl::ExtractExtents<double*[2][3]>;
+      printf("Extents: %s\n",typeid(typename ext2_t::extents_type).name());
+
+      using data_t = typename Kokkos::Impl::DataTypeFromExtents<double, stdex::extents<1,2,3>>::type;
+      printf("DataType: %s\n",typeid(data_t).name());
+
+      Kokkos::View<int**> a("A",N0);
+
+#if 0
   double* ptr;
   auto foo =  Kokkos::view_wrap(ptr);
   printf("%i\n",decltype(foo)::has_pointer?1:0);
@@ -258,13 +281,34 @@ TEST(defaultdevicetype, development_test) {
       Kokkos::View<int***,Kokkos::LayoutRight>(a_org,5,7,Kokkos::ALL,Kokkos::ALL,Kokkos::ALL);
       //Kokkos::View<int***,Kokkos::LayoutRight>(a_org,5,7,stdex::full_extent,stdex::full_extent,stdex::full_extent);
       printf("%s\n",typeid(decltype(a_sub)).name());
+
+      Kokkos::View<int,Kokkos::LayoutRight> lr_scalar("A");
+
+      auto lr_map = lr_scalar.get_mdspan().mapping();
+      auto bsub_s = Kokkos::submdspan(Kokkos::LayoutRight(), b.get_mdspan(), 0,0);
+      printf("%s %s %s\n", typeid(decltype(bsub_s)).name(), typeid(decltype(bsub_s.mapping())).name(),typeid(decltype(lr_map)).name());
+      lr_map = bsub_s.mapping();
+
+      static_assert(!std::is_convertible<decltype(std::declval<Kokkos::View<double**>>().get_mdspan()), decltype(std::declval<Kokkos::View<int**>>().get_mdspan())>::value,"UPSI");
+      static_assert(!std::is_convertible<Kokkos::View<double**>,Kokkos::View<int**>>::value,"UPSI");
+      //      Kokkos::View<int,Kokkos::LayoutLeft> ll_scalar(b,0,0);
+//      lr_scalar = ll_scalar;
+      Kokkos::View<int[1][2][3][4][5],stdex::layout_right> d5("D5");
+      auto d5sub = Kokkos::subview(d5,0,0,Kokkos::ALL, Kokkos::ALL, Kokkos::ALL);
+      printf("%s\n",typeid(d5sub).name());
+      auto d5sub_md = std::experimental::submdspan(d5.get_mdspan(),0,0,stdex::full_extent,stdex::full_extent,stdex::full_extent);
+      printf("%s\n %s\n %s\n",typeid(d5).name(),
+                      typeid(decltype(d5.get_mdspan())).name(),
+                      typeid(d5sub_md).name()
+                      );
+  }
+#endif
 //
   //  stdex::mdspan<int,stdex::dextents<3>,stdex::layout_stride> b_sub;
  //   stdex::mdspan<int,stdex::extents<stdex::dynamic_extent,7,3>,stdex::layout_stride> a_sub;
  //   a_sub = b_sub;
     
 
-  }
   //        printf("%i\n",int(a.use_count()));
   //        Kokkos::View<int*,Kokkos::LayoutRight> c(a,2,Kokkos::ALL);
   //        using View_3D      = typename Kokkos::View<int ***, Kokkos::OpenMP>;
