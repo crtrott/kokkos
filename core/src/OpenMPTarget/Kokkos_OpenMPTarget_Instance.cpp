@@ -78,6 +78,8 @@ void OpenMPTargetInternal::fence(const std::string& name,
         Kokkos::Tools::Experimental::Impl::DirectFenceIDHandle{
             impl_get_instance_id()},
         [&]() {});
+    // Compiler BUG? this seems to wait for everything with Clang 13
+  #pragma omp taskwait depend(inout: this[0])
   } else {
     Kokkos::Tools::Experimental::Impl::profile_fence_event<
         Kokkos::Experimental::OpenMPTarget>(
@@ -85,11 +87,7 @@ void OpenMPTargetInternal::fence(const std::string& name,
         Kokkos::Tools::Experimental::SpecialSynchronizationCases::
             GlobalDeviceSynchronization,
         [&]() {});
-  }
-  printf("Fence: %p\n",this);
-  #pragma omp target teams distribute depend(inout: this[0])
-  for(int i=0; i<1; i++) {
-    printf("Fence Device\n");
+  #pragma omp taskwait
   }
 }
 int OpenMPTargetInternal::concurrency() { return 128000; }
