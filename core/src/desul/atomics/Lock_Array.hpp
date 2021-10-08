@@ -12,6 +12,7 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #include "desul/atomics/Compare_Exchange.hpp"
 #include "desul/atomics/Lock_Array_Cuda.hpp"
 #include "desul/atomics/Lock_Array_HIP.hpp"
+#include "desul/atomics/Lock_Array_OpenMP.hpp"
 #include "desul/atomics/Macros.hpp"
 
 namespace desul {
@@ -44,6 +45,9 @@ inline void init_lock_arrays() {
 #ifdef DESUL_HAVE_HIP_ATOMICS
   init_lock_arrays_hip();
 #endif
+#ifdef DESUL_HAVE_OPENMP_ATOMICS
+  init_lock_arrays_openmp();
+#endif
 }
 
 inline void finalize_lock_arrays() {
@@ -53,6 +57,10 @@ inline void finalize_lock_arrays() {
 
 #ifdef DESUL_HAVE_HIP_ATOMICS
   finalize_lock_arrays_hip();
+#endif
+
+#ifdef DESUL_HAVE_OPENMP_ATOMICS
+  finalize_lock_arrays_openmp();
 #endif
 }
 template <typename MemoryScope>

@@ -220,6 +220,9 @@ atomic_oper_fetch(const Oper& op,
   return newval;
 }
 
+#ifdef DESUL_HAVE_OPENMP_ATOMICS
+#include<desul/atomics/Generic_OpenMP_LockBased.hpp>
+#else
 template <class Oper, typename T, class MemoryOrder, class MemoryScope,
   // equivalent to:
   //   requires !atomic_always_lock_free(sizeof(T))
@@ -372,6 +375,7 @@ atomic_oper_fetch(const Oper& op,
   return val;
 #endif
 }
+#endif
 
 }  // namespace Impl
 }  // namespace desul

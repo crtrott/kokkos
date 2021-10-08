@@ -96,6 +96,7 @@ void OpenMPTargetInternal::print_configuration(std::ostream& /*stream*/,
 }
 
 void OpenMPTargetInternal::impl_finalize() {
+  desul::Impl::finalize_lock_arrays();
   m_is_initialized = false;
   Kokkos::Impl::OpenMPTargetExec space;
   if (space.m_lock_array != nullptr) space.clear_lock_array();
@@ -115,6 +116,8 @@ void OpenMPTargetInternal::impl_initialize() {
   omp_set_num_teams(512);
 #endif
 #endif
+
+  desul::Impl::init_lock_arrays();
 }
 int OpenMPTargetInternal::impl_is_initialized() {
   return m_is_initialized ? 1 : 0;
