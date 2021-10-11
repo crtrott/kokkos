@@ -65,6 +65,11 @@ TEST(TEST_CATEGORY, atomic_operations_complexdouble) {
 enum { N0 = 5};
 namespace stdex = std::experimental;
 TEST(defaultdevicetype, development_test) {
+
+      stdex::extents aaa{3,3,3};
+      stdex::extents<3,stdex::dynamic_extent,3> bbb{3};
+      printf("COMPARE: %i\n",aaa!=bbb?1:0);
+
       using ext_t = Kokkos::Impl::ExtractExtents<double[1][2][3]>;
       printf("Extents: %s\n",typeid(typename ext_t::extents_type).name());
       using ext2_t = Kokkos::Impl::ExtractExtents<double*[2][3]>;
