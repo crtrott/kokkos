@@ -47,7 +47,7 @@ void atomic_thread_fence(MemoryOrder, MemoryScope) {
 template <typename T, class MemoryOrder, class MemoryScope>
 std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
 atomic_exchange(
-    T* dest, T value, MemoryOrder, MemoryScope) {
+    T* dest, Impl::dont_deduce_this_parameter_t<const T> value, MemoryOrder, MemoryScope) {
   T return_val;
   __atomic_exchange(
      dest, &value, &return_val, GCCMemoryOrder<MemoryOrder>::value);
@@ -59,7 +59,7 @@ atomic_exchange(
 template <typename T, class MemoryOrder, class MemoryScope>
 std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
 atomic_compare_exchange(
-    T* dest, T compare, T value, MemoryOrder, MemoryScope) {
+    T* dest, Impl::dont_deduce_this_parameter_t<const T> compare, Impl::dont_deduce_this_parameter_t<const T> value, MemoryOrder, MemoryScope) {
   (void)__atomic_compare_exchange(
       dest, &compare, &value, false, GCCMemoryOrder<MemoryOrder>::value, GCCMemoryOrder<MemoryOrder>::value);
   return compare;
@@ -68,7 +68,7 @@ atomic_compare_exchange(
 template <typename T, class MemoryScope>
 std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
 atomic_compare_exchange(
-    T* dest, T compare, T value, MemoryOrderRelease, MemoryScope) {
+    T* dest, Impl::dont_deduce_this_parameter_t<const T> compare, Impl::dont_deduce_this_parameter_t<const T> value, MemoryOrderRelease, MemoryScope) {
   (void)__atomic_compare_exchange(
       dest, &compare, &value, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
   return compare;
@@ -77,7 +77,7 @@ atomic_compare_exchange(
 template <typename T, class MemoryScope>
 std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
 atomic_compare_exchange(
-    T* dest, T compare, T value, MemoryOrderAcqRel, MemoryScope) {
+    T* dest, Impl::dont_deduce_this_parameter_t<const T> compare, Impl::dont_deduce_this_parameter_t<const T> value, MemoryOrderAcqRel, MemoryScope) {
   (void)__atomic_compare_exchange(
       dest, &compare, &value, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
   return compare;

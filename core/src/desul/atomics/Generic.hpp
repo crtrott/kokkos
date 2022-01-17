@@ -10,7 +10,6 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #define DESUL_ATOMICS_GENERIC_HPP_
 
 #include <type_traits>
-
 #if defined(__GNUC__) && (!defined(__clang__))
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -267,11 +266,11 @@ atomic_fetch_oper(const Oper& op,
   return return_val;
 // FIXME_SYCL not implemented
 #elif defined(__SYCL_DEVICE_ONLY__)
-  (void) op;
-  (void) dest;
-  (void) scope;
-  (void) return_val;
-  (void) done;
+  (void)op;
+  (void)dest;
+  (void)scope;
+  (void)return_val;
+  (void)done;
 
   assert(false);
   return val;
@@ -295,7 +294,7 @@ atomic_fetch_oper(const Oper& op,
   return return_val;
 #endif
 #else
-  static_assert(false, "Unimplemented lock based attomic\n");
+  static_assert(false, "Unimplemented lock based atomic\n");
   return val;
 #endif
 }
@@ -344,10 +343,10 @@ atomic_oper_fetch(const Oper& op,
   return return_val;
   // FIXME_SYCL not implemented
 #elif defined(__SYCL_DEVICE_ONLY__)
-  (void) op;
-  (void) dest;
-  (void) scope;
-  (void) done;
+  (void)op;
+  (void)dest;
+  (void)scope;
+  (void)done;
 
   assert(false);
   return val;
@@ -376,8 +375,35 @@ atomic_oper_fetch(const Oper& op,
 #endif
 }
 
+template <class Oper, typename T, class MemoryOrder>
+DESUL_INLINE_FUNCTION T
+atomic_fetch_oper(const Oper& op,
+                  T* const dest,
+                  dont_deduce_this_parameter_t<const T> val,
+                  MemoryOrder /*order*/,
+                  MemoryScopeCaller /*scope*/) {
+  T oldval = *dest;
+  *dest = op.apply(oldval, val);
+  return oldval;
+}
+
+template <class Oper, typename T, class MemoryOrder>
+DESUL_INLINE_FUNCTION T
+atomic_oper_fetch(const Oper& op,
+                  T* const dest,
+                  dont_deduce_this_parameter_t<const T> val,
+                  MemoryOrder /*order*/,
+                  MemoryScopeCaller /*scope*/) {
+  T oldval = *dest;
+  T newval = op.apply(oldval, val);
+  *dest = newval;
+  return newval;
+}
+
 }  // namespace Impl
 }  // namespace desul
+
+
 
 namespace desul {
 
@@ -711,11 +737,11 @@ DESUL_INLINE_FUNCTION bool atomic_compare_exchange_weak(T* const dest,
 
 }  // namespace desul
 
-#include <desul/atomics/SYCL.hpp>
 #include <desul/atomics/CUDA.hpp>
 #include <desul/atomics/GCC.hpp>
 #include <desul/atomics/HIP.hpp>
 #include <desul/atomics/OpenMP.hpp>
+#include <desul/atomics/SYCL.hpp>
 #if defined(__GNUC__) && (!defined(__clang__))
 #pragma GCC diagnostic pop
 #endif
