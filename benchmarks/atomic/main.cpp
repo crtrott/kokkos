@@ -2,12 +2,17 @@
 #include <Kokkos_Timer.hpp>
 #include <Kokkos_Random.hpp>
 
+using mem_t = Kokkos::CudaHostPinnedSpace;
+using ord_t = desul::MemoryOrderRelaxed;
+using scope_t = desul::MemoryScopeNode;
+
 template <class Scalar>
 double test_atomic(int L, int N, int M, int K, int R,
                    Kokkos::View<const int**> offsets) {
-  Kokkos::View<Scalar*> output("Output", N);
-  Kokkos::Timer timer;
+  Kokkos::View<Scalar*,mem_t> output("Output", N);
+  Kokkos::fence();
 
+  Kokkos::Timer timer;
   for (int r = 0; r < R; r++)
     Kokkos::parallel_for(
         L, KOKKOS_LAMBDA(const int& i) {
@@ -15,7 +20,8 @@ double test_atomic(int L, int N, int M, int K, int R,
           for (int m = 0; m < M; m++) {
             for (int k = 0; k < K; k++) s = s * s + s;
             const int idx = (i + offsets(i, m)) % N;
-            Kokkos::atomic_add(&output(idx), s);
+            //Kokkos::atomic_add(&output(idx), s);
+            desul::atomic_add(&output(idx), s, ord_t(), scope_t());
           }
         });
   Kokkos::fence();
@@ -27,7 +33,9 @@ double test_atomic(int L, int N, int M, int K, int R,
 template <class Scalar>
 double test_no_atomic(int L, int N, int M, int K, int R,
                       Kokkos::View<const int**> offsets) {
-  Kokkos::View<Scalar*> output("Output", N);
+  Kokkos::View<Scalar*,mem_t> output("Output", N);
+  Kokkos::fence();
+
   Kokkos::Timer timer;
   for (int r = 0; r < R; r++)
     Kokkos::parallel_for(
