@@ -19,7 +19,7 @@ namespace desul {
 
 namespace Impl {
 template <class T>
-struct atomic_exchange_available_gcc {
+struct host_atomic_exchange_available_gcc {
   constexpr static bool value =
 #ifndef DESUL_HAVE_LIBATOMIC
       ((sizeof(T) == 4 && alignof(T) == 4) ||
@@ -30,7 +30,6 @@ struct atomic_exchange_available_gcc {
 #endif
       std::is_trivially_copyable<T>::value;
 };
-}  // namespace Impl
 
 #if defined(__clang__) && (__clang_major__ >= 7) && !defined(__APPLE__)
 // clang-format off
@@ -42,23 +41,23 @@ struct atomic_exchange_available_gcc {
 #pragma GCC diagnostic ignored "-Watomic-alignment"
 #endif
 template <class MemoryOrder, class MemoryScope>
-void atomic_thread_fence(MemoryOrder, MemoryScope) {
+void host_atomic_thread_fence(MemoryOrder, MemoryScope) {
   __atomic_thread_fence(GCCMemoryOrder<MemoryOrder>::value);
 }
 
 template <typename T, class MemoryOrder, class MemoryScope>
-std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T> atomic_exchange(
-    T* dest, T value, MemoryOrder, MemoryScope) {
+std::enable_if_t<Impl::host_atomic_exchange_available_gcc<T>::value, T>
+host_atomic_exchange(T* dest, T value, MemoryOrder, MemoryScope) {
   T return_val;
   __atomic_exchange(dest, &value, &return_val, GCCMemoryOrder<MemoryOrder>::value);
   return return_val;
 }
 
-// Failure mode for atomic_compare_exchange_n cannot be RELEASE nor ACQREL so
+// Failure mode for host_atomic_compare_exchange_n cannot be RELEASE nor ACQREL so
 // Those two get handled separatly.
 template <typename T, class MemoryOrder, class MemoryScope>
-std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
-atomic_compare_exchange(T* dest, T compare, T value, MemoryOrder, MemoryScope) {
+std::enable_if_t<Impl::host_atomic_exchange_available_gcc<T>::value, T>
+host_atomic_compare_exchange(T* dest, T compare, T value, MemoryOrder, MemoryScope) {
   (void)__atomic_compare_exchange(dest,
                                   &compare,
                                   &value,
@@ -69,16 +68,18 @@ atomic_compare_exchange(T* dest, T compare, T value, MemoryOrder, MemoryScope) {
 }
 
 template <typename T, class MemoryScope>
-std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
-atomic_compare_exchange(T* dest, T compare, T value, MemoryOrderRelease, MemoryScope) {
+std::enable_if_t<Impl::host_atomic_exchange_available_gcc<T>::value, T>
+host_atomic_compare_exchange(
+    T* dest, T compare, T value, MemoryOrderRelease, MemoryScope) {
   (void)__atomic_compare_exchange(
       dest, &compare, &value, false, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
   return compare;
 }
 
 template <typename T, class MemoryScope>
-std::enable_if_t<Impl::atomic_exchange_available_gcc<T>::value, T>
-atomic_compare_exchange(T* dest, T compare, T value, MemoryOrderAcqRel, MemoryScope) {
+std::enable_if_t<Impl::host_atomic_exchange_available_gcc<T>::value, T>
+host_atomic_compare_exchange(
+    T* dest, T compare, T value, MemoryOrderAcqRel, MemoryScope) {
   (void)__atomic_compare_exchange(
       dest, &compare, &value, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
   return compare;
@@ -87,6 +88,7 @@ atomic_compare_exchange(T* dest, T compare, T value, MemoryOrderAcqRel, MemorySc
 #if defined(__clang__) && (__clang_major__ >= 7) && !defined(__APPLE__)
 #pragma GCC diagnostic pop
 #endif
+}  // namespace Impl
 }  // namespace desul
 #endif
 #endif
