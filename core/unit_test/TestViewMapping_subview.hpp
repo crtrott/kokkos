@@ -128,34 +128,42 @@ struct TestViewMappingSubview {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int, long& error_count) const {
-    auto Ad = Kokkos::subview<Kokkos::MemoryUnmanaged>(
-        Aa, Kokkos::pair<int, int>(1, AN - 1));
+//    auto Ad = Kokkos::subview(
+//        Aa, Kokkos::pair<int, int>(1, AN - 1));
+    decltype(Aa) Ad(Aa,Kokkos::pair<int,int>(1,AN-1));
 
     for (int i = 1; i < AN - 1; ++i)
-      if (&Aa[i] != &Ab[i - 1]) ++error_count;
+      if (&Aa[i] != &Ab[i - 1]) { ++error_count; printf("Error Aa Ab: %i %p %p\n",i,&Aa[i],&Ab[i-1]); }
     for (int i = 1; i < AN - 1; ++i)
-      if (&Aa[i] != &Ac[i - 1]) ++error_count;
+      if (&Aa[i] != &Ac[i - 1]) { ++error_count; printf("Error Aa Ac: %i %p %p\n",i,&Aa[i],&Ac[i-1]);}
     for (int i = 1; i < AN - 1; ++i)
-      if (&Aa[i] != &Ad[i - 1]) ++error_count;
+      if (&Aa[i] != &Ad[i - 1]) { ++error_count; printf("Error Aa Ad: %i %p %p %i\n",i,&Aa[i],&Ad[i-1], Kokkos::pair<int, int>(1, AN -1).first); }
 
     for (int i2 = 1; i2 < BN2 - 1; ++i2)
       for (int i1 = 1; i1 < BN1 - 1; ++i1)
         for (int i0 = 1; i0 < BN0 - 1; ++i0) {
-          if (&Ba(i0, i1, i2) != &Bb(i0 - 1, i1 - 1, i2 - 1)) ++error_count;
+          if (&Ba(i0, i1, i2) != &Bb(i0 - 1, i1 - 1, i2 - 1)) {
+                  ++error_count;
+            printf("Error Ba Bb: %i %i %i (%p %p)\n",i0,i1,i2,&Ba(i0, i1, i2), &Bb(i0 - 1, i1 - 1, i2 - 1));
+          }
         }
 
     for (int i2 = 1; i2 < CN2 - 1; ++i2)
       for (int i1 = 1; i1 < CN1 - 1; ++i1)
         for (int i0 = 1; i0 < CN0 - 1; ++i0) {
-          if (&Ca(i0, i1, i2, 1, 2) != &Cb(i0 - 1, i1 - 1, i2 - 1))
+          if (&Ca(i0, i1, i2, 1, 2) != &Cb(i0 - 1, i1 - 1, i2 - 1)) {
             ++error_count;
+            printf("Error Ca Cb: %i %i %i (%p %p)\n",i0,i1,i2,&Ca(i0, i1, i2, 1, 2), &Cb(i0 - 1, i1 - 1, i2 - 1));
+          }
         }
 
     for (int i2 = 1; i2 < DN3 - 1; ++i2)
       for (int i1 = 1; i1 < DN2 - 1; ++i1)
         for (int i0 = 1; i0 < DN1 - 1; ++i0) {
-          if (&Da(1, i0, i1, i2, 2) != &Db(i0 - 1, i1 - 1, i2 - 1))
-            ++error_count;
+          if (&Da(1, i0, i1, i2, 2) != &Db(i0 - 1, i1 - 1, i2 - 1)) {
+            ++error_count; 
+            printf("Error Da Db: %i %i %i (%p %p)\n",i0,i1,i2,&Da(1, i0, i1, i2, 2), &Db(i0 - 1, i1 - 1, i2 - 1));
+          }
         }
   }
 

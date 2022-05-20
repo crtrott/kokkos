@@ -447,7 +447,7 @@ struct SubviewLegalArgsCompileTime<Kokkos::LayoutStride, Kokkos::LayoutStride,
 
 template <unsigned DomainRank, unsigned RangeRank>
 struct SubviewExtents {
- private:
+ public:
   // Cannot declare zero-length arrays
   // '+' is used to silence GCC 7.2.0 -Wduplicated-branches warning when
   // RangeRank=1
@@ -502,8 +502,9 @@ struct SubviewExtents {
                                        Args... args) {
     const size_t b = static_cast<size_t>(val.first);
     const size_t e = static_cast<size_t>(val.second);
-
+    
     m_begin[domain_rank] = b;
+    printf("Set std::pair %i %i\n",(int)m_begin[domain_rank],(int)b);
     m_length[range_rank] = e - b;
     m_index[range_rank]  = domain_rank;
 
@@ -525,6 +526,7 @@ struct SubviewExtents {
     const size_t e = static_cast<size_t>(val.second);
 
     m_begin[domain_rank] = b;
+    printf("Set Kokkos::pair %i %i\n",(int)m_begin[domain_rank],(int)b);
     m_length[range_rank] = e - b;
     m_index[range_rank]  = domain_rank;
 
@@ -957,6 +959,19 @@ struct ViewOffset<
   KOKKOS_INLINE_FUNCTION constexpr size_type operator()(
       I0 const& i0, I1 const& i1, I2 const& i2, I3 const& i3, I4 const& i4,
       I5 const& i5, I6 const& i6, I7 const& i7) const {
+    printf(
+        "Offset: %i %i\n",(int)i0,
+        (int)i0 +
+            m_dim.N0 *
+                (i1 +
+                 m_dim.N1 *
+                     (i2 +
+                      m_dim.N2 *
+                          (i3 +
+                           m_dim.N3 *
+                               (i4 +
+                                m_dim.N4 *
+                                    (i5 + m_dim.N5 * (i6 + m_dim.N6 * i7)))))));
     return i0 +
            m_dim.N0 *
                (i1 +
@@ -3903,7 +3918,12 @@ class ViewMapping<
                                                         args...);
 
     dst.m_impl_offset = dst_offset_type(src.m_impl_offset, extents);
-
+    
+    printf("%i %i\n", (int) extents.m_begin[0],(int)src.m_impl_offset(
+                       extents.domain_offset(0), extents.domain_offset(1),
+                       extents.domain_offset(2), extents.domain_offset(3),
+                       extents.domain_offset(4), extents.domain_offset(5),
+                       extents.domain_offset(6), extents.domain_offset(7)));
     dst.m_impl_handle = ViewDataHandle<DstTraits>::assign(
         src.m_impl_handle,
         src.m_impl_offset(extents.domain_offset(0), extents.domain_offset(1),
