@@ -55,11 +55,11 @@ void foo() {
   Kokkos::View<int*> a("A",20);
   Kokkos::View<int*> b(a,Kokkos::pair<int,int>(1,19));
   Kokkos::parallel_for(1, KOKKOS_LAMBDA(int i) {
-    Kokkos::View<int*> d(a,Kokkos::pair<int,int>(1,19));
-    printf("Error: %i %p %p %p\n",i,a.data(),b.data(),d.data());
     auto p = Kokkos::pair<int,int>(1,19);
     Kokkos::View<int*> c(a,p);
     printf("Error: %i %p %p %p %i\n",i,a.data(),b.data(),c.data(),p.first);
+    Kokkos::View<int*> d(a,Kokkos::pair<int,int>(2,18));
+    printf("Error: %i %p %p %p\n",i,a.data(),b.data(),d.data());
   });
 }
 
