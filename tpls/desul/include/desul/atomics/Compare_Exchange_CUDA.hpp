@@ -8,71 +8,40 @@ SPDX-License-Identifier: (BSD-3-Clause)
 
 #ifndef DESUL_ATOMICS_COMPARE_EXCHANGE_CUDA_HPP_
 #define DESUL_ATOMICS_COMPARE_EXCHANGE_CUDA_HPP_
+
 #include <type_traits>
 
 #include "desul/atomics/Common.hpp"
 #include "desul/atomics/Lock_Array_Cuda.hpp"
 
-#ifdef DESUL_HAVE_CUDA_ATOMICS
 namespace desul {
 namespace Impl {
-// Only include if compiling device code, or the CUDA compiler is not NVCC (i.e. Clang)
-// device_atomic_thread_fence implementation
-#if defined(__CUDA_ARCH__) || !defined(__NVCC__)
-__device__ inline void device_atomic_thread_fence(MemoryOrderRelease,
-                                                  MemoryScopeDevice) {
-  __threadfence();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcquire,
-                                                  MemoryScopeDevice) {
-  __threadfence();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcqRel,
-                                                  MemoryScopeDevice) {
-  __threadfence();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderSeqCst,
-                                                  MemoryScopeDevice) {
-  __threadfence();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderRelease, MemoryScopeCore) {
-  __threadfence_block();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcquire, MemoryScopeCore) {
-  __threadfence_block();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcqRel, MemoryScopeCore) {
-  __threadfence_block();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderSeqCst, MemoryScopeCore) {
-  __threadfence_block();
-}
-#if (__CUDA_ARCH__ >= 600) || !defined(__NVCC__)
-__device__ inline void device_atomic_thread_fence(MemoryOrderRelease, MemoryScopeNode) {
-  __threadfence_system();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcquire, MemoryScopeNode) {
-  __threadfence_system();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderAcqRel, MemoryScopeNode) {
-  __threadfence_system();
-}
-__device__ inline void device_atomic_thread_fence(MemoryOrderSeqCst, MemoryScopeNode) {
-  __threadfence_system();
-}
+
+// clang-format off
+inline __device__ void device_atomic_thread_fence(MemoryOrderRelease, MemoryScopeDevice) { __threadfence(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcquire, MemoryScopeDevice) { __threadfence(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcqRel,  MemoryScopeDevice) { __threadfence(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderSeqCst,  MemoryScopeDevice) { __threadfence(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderRelease, MemoryScopeCore)   { __threadfence_block(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcquire, MemoryScopeCore)   { __threadfence_block(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcqRel,  MemoryScopeCore)   { __threadfence_block(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderSeqCst,  MemoryScopeCore)   { __threadfence_block(); }
+#ifndef DESUL_CUDA_ARCH_IS_PRE_PASCAL
+inline __device__ void device_atomic_thread_fence(MemoryOrderRelease, MemoryScopeNode)   { __threadfence_system(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcquire, MemoryScopeNode)   { __threadfence_system(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderAcqRel,  MemoryScopeNode)   { __threadfence_system(); }
+inline __device__ void device_atomic_thread_fence(MemoryOrderSeqCst,  MemoryScopeNode)   { __threadfence_system(); }
 #endif
-#endif
+// clang-format on
+
 }  // namespace Impl
 }  // namespace desul
 
-// Compare Exchange for PRE Volta, not supported with CLANG as CUDA compiler, since we
-// do NOT have a way of having the code included for clang only when the CC is smaller
-// than 700
-// But on Clang the device side symbol list must be independent of __CUDA_ARCH__
-#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 700)) || \
-    (!defined(__NVCC__) && defined(DESUL_CUDA_ARCH_IS_PRE_VOLTA))
+#ifdef DESUL_CUDA_ARCH_IS_PRE_VOLTA
+
 namespace desul {
 namespace Impl {
+
 template <typename T, class MemoryScope>
 __device__ typename ::std::enable_if<sizeof(T) == 4, T>::type
 device_atomic_compare_exchange(
@@ -89,7 +58,7 @@ __device__ typename ::std::enable_if<sizeof(T) == 8, T>::type
 device_atomic_compare_exchange(
     T* const dest, T compare, T value, MemoryOrderRelaxed, MemoryScope) {
   static_assert(sizeof(unsigned long long int) == 8,
-                "this function assumes an unsigned long long  is 64-bit");
+                "this function assumes an unsigned long long is 64-bit");
   unsigned long long int return_val =
       atomicCAS(reinterpret_cast<unsigned long long int*>(dest),
                 reinterpret_cast<unsigned long long int&>(compare),
@@ -141,7 +110,7 @@ template <typename T, class MemoryScope>
 __device__ typename ::std::enable_if<sizeof(T) == 8, T>::type device_atomic_exchange(
     T* const dest, T value, MemoryOrderRelaxed, MemoryScope) {
   static_assert(sizeof(unsigned long long int) == 8,
-                "this function assumes an unsigned long long  is 64-bit");
+                "this function assumes an unsigned long long is 64-bit");
   unsigned long long int return_val =
       atomicExch(reinterpret_cast<unsigned long long int*>(dest),
                  reinterpret_cast<unsigned long long int&>(value));
@@ -177,6 +146,7 @@ device_atomic_exchange(T* const dest, T value, MemoryOrderAcqRel, MemoryScope) {
 }
 }  // namespace Impl
 }  // namespace desul
+
 #endif
 
 // Including CUDA ptx based exchange atomics
@@ -187,8 +157,7 @@ device_atomic_exchange(T* const dest, T value, MemoryOrderAcqRel, MemoryScope) {
 // We simply can say DESUL proper doesn't support clang CUDA build pre Volta,
 // Kokkos has that knowledge and so I use it here, allowing in Kokkos to use
 // clang with pre Volta as CUDA compiler
-#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 700)) || \
-    (!defined(__NVCC__) && !defined(DESUL_CUDA_ARCH_IS_PRE_VOLTA)) || true
+#ifndef DESUL_CUDA_ARCH_IS_PRE_VOLTA
 #include <desul/atomics/cuda/CUDA_asm_exchange.hpp>
 #endif
 
@@ -295,5 +264,4 @@ device_atomic_exchange(T* const dest, T value, MemoryOrder, MemoryScope scope) {
 }  // namespace desul
 #endif
 
-#endif
 #endif

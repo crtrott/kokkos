@@ -5,328 +5,127 @@ Source: https://github.com/desul/desul
 
 SPDX-License-Identifier: (BSD-3-Clause)
 */
+
 #ifndef DESUL_ATOMICS_CUDA_HPP_
 #define DESUL_ATOMICS_CUDA_HPP_
 
-#ifdef DESUL_HAVE_CUDA_ATOMICS
-// When building with Clang we need to include the device functions always since Clang
-// must see a consistent overload set in both device and host compilation, but that
-// means we need to know on the host what to make visible, i.e. we need a host side
-// compile knowledge of architecture.
-#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 700)) || \
-    (!defined(__NVCC__) && !defined(DESUL_CUDA_ARCH_IS_PRE_VOLTA))
-#define DESUL_HAVE_CUDA_ATOMICS_ASM
-#include <desul/atomics/cuda/CUDA_asm.hpp>
-#endif
+#ifndef DESUL_CUDA_ARCH_IS_PRE_VOLTA
 
-#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 700)) || \
-    (!defined(__NVCC__) && !defined(DESUL_HAVE_CUDA_ATOMICS_ASM))
+#define DESUL_HAVE_CUDA_ATOMICS_ASM
+
+#include <desul/atomics/cuda/CUDA_asm.hpp>
+
+#else
+
 namespace desul {
 namespace Impl {
-template <class T>
-struct is_cuda_atomic_integer_type {
-  static constexpr bool value = std::is_same<T, int>::value ||
-                                std::is_same<T, unsigned int>::value ||
-                                std::is_same<T, unsigned long long int>::value;
-};
 
-template <class T>
-struct is_cuda_atomic_add_type {
-  static constexpr bool value = is_cuda_atomic_integer_type<T>::value ||
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 600)
-                                std::is_same<T, double>::value ||
+// clang-format off
+inline __device__                int device_atomic_fetch_add(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_add(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_add(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, val); }
+inline __device__              float device_atomic_fetch_add(             float* ptr,              float val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, val); }
+#ifndef DESUL_CUDA_ARCH_IS_PRE_PASCAL
+inline __device__             double device_atomic_fetch_add(            double* ptr,             double val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, val); }
 #endif
-                                std::is_same<T, float>::value;
-};
 
-template <class T>
-struct is_cuda_atomic_sub_type {
-  static constexpr bool value =
-      std::is_same<T, int>::value || std::is_same<T, unsigned int>::value;
-};
+inline __device__                int device_atomic_fetch_sub(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_sub(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_sub(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
+inline __device__              float device_atomic_fetch_sub(             float* ptr,              float val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
+#ifndef DESUL_CUDA_ARCH_IS_PRE_PASCAL
+inline __device__             double device_atomic_fetch_sub(            double* ptr,             double val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
+#endif
+
+inline __device__                int device_atomic_fetch_min(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_min(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_min(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr, val); }
+
+inline __device__                int device_atomic_fetch_max(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_max(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_max(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr, val); }
+
+inline __device__                int device_atomic_fetch_and(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_and(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_and(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr, val); }
+
+inline __device__                int device_atomic_fetch_or (               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_or (      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_or (unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr, val); }
+
+inline __device__                int device_atomic_fetch_xor(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_xor(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr, val); }
+inline __device__ unsigned long long device_atomic_fetch_xor(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr, val); }
+
+inline __device__                int device_atomic_fetch_inc(               int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1   ); }
+inline __device__       unsigned int device_atomic_fetch_inc(      unsigned int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1u  ); }
+inline __device__ unsigned long long device_atomic_fetch_inc(unsigned long long* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1ull); }
+
+inline __device__                int device_atomic_fetch_dec(               int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr, 1   ); }
+inline __device__       unsigned int device_atomic_fetch_dec(      unsigned int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr, 1u  ); }
+inline __device__ unsigned long long device_atomic_fetch_dec(unsigned long long* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -1  ); }
+
+inline __device__       unsigned int device_atomic_fetch_inc_mod(  unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicInc(ptr, val); }
+inline __device__       unsigned int device_atomic_fetch_dec_mod(  unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicDec(ptr, val); }
+// clang-format on
+
+#define DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, TYPE)                               \
+  template <class MemoryOrder>                                                         \
+  inline __device__ TYPE device_atomic_fetch_##OP(                                     \
+      TYPE* ptr, TYPE val, MemoryOrder, MemoryScopeDevice) {                           \
+    __threadfence();                                                                   \
+    TYPE return_val =                                                                  \
+        device_atomic_fetch_##OP(ptr, val, MemoryOrderRelaxed(), MemoryScopeDevice()); \
+    __threadfence();                                                                   \
+    return return_val;                                                                 \
+  }                                                                                    \
+  template <class MemoryOrder>                                                         \
+  inline __device__ TYPE device_atomic_fetch_##OP(                                     \
+      TYPE* ptr, TYPE val, MemoryOrder, MemoryScopeCore) {                             \
+    return device_atomic_fetch_##OP(ptr, val, MemoryOrder(), MemoryScopeDevice());     \
+  }
+
+#define DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(OP) \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, int)           \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, unsigned int)  \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, unsigned long long)
+
+#ifdef DESUL_CUDA_ARCH_IS_PRE_PASCAL
+
+#define DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(OP) \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, float)
+
+#else
+
+#define DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(OP) \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, float)               \
+  DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(OP, double)
+
+#endif
+
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(min)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(max)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(and)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(or)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(xor)
+
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(add)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(add)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(sub)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(sub)
+
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(inc)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(dec)
+
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(inc_mod, unsigned int)
+DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP(dec_mod, unsigned int)
+
+#undef DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT
+#undef DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP_INTEGRAL
+#undef DESUL_IMPL_CUDA_DEVICE_ATOMIC_FETCH_OP
+
 }  // namespace Impl
-
-// Atomic Add
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_add(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicAdd(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_add(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicAdd(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_add(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_add(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic Sub
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_sub(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicSub(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_sub(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicSub(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_sub(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_sub(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Wrap around atomic add
-__device__ inline unsigned int device_atomic_fetch_inc_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrderRelaxed,
-                                                           MemoryScopeDevice) {
-  return atomicInc(dest, val);
-}
-
-template <typename MemoryOrder>
-__device__ inline unsigned int device_atomic_fetch_inc_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrder,
-                                                           MemoryScopeDevice) {
-  __threadfence();
-  unsigned int return_val = atomicInc(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <typename MemoryOrder>
-__device__ inline unsigned int device_atomic_fetch_inc_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrder,
-                                                           MemoryScopeCore) {
-  return device_atomic_fetch_inc_mod(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Wrap around atomic sub
-__device__ inline unsigned int device_atomic_fetch_dec_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrderRelaxed,
-                                                           MemoryScopeDevice) {
-  return atomicDec(dest, val);
-}
-
-template <typename MemoryOrder>
-__device__ inline unsigned int device_atomic_fetch_dec_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrder,
-                                                           MemoryScopeDevice) {
-  __threadfence();
-  unsigned int return_val = atomicDec(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <typename MemoryOrder>
-__device__ inline unsigned int device_atomic_fetch_dec_mod(unsigned int* dest,
-                                                           unsigned int val,
-                                                           MemoryOrder,
-                                                           MemoryScopeCore) {
-  return device_atomic_fetch_dec_mod(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic Inc
-template <typename T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_inc(T* dest, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicAdd(dest, T(1));
-}
-
-template <typename T, typename MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_inc(T* dest, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicAdd(dest, T(1));
-  __threadfence();
-
-  return return_val;
-}
-
-template <typename T, typename MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_add_type<T>::value, T>::type
-    device_atomic_fetch_inc(T* dest, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_add(dest, T(1), MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic Dec
-template <typename T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_dec(T* dest, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicSub(dest, T(1));
-}
-
-template <typename T, typename MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_dec(T* dest, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicSub(dest, T(1));
-  __threadfence();
-  return return_val;
-}
-
-template <typename T, typename MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_sub_type<T>::value, T>::type
-    device_atomic_fetch_dec(T* dest, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_sub(dest, T(1), MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic Max
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_max(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicMax(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_max(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicMax(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_max(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_max(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic Min
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_min(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicMin(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_min(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicMin(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_min(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_min(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic And
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_and(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicAnd(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_and(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicAnd(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_and(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_and(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic XOR
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_xor(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicXor(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_xor(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicXor(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_xor(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_xor(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
-
-// Atomic OR
-template <class T>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_or(T* dest, T val, MemoryOrderRelaxed, MemoryScopeDevice) {
-  return atomicOr(dest, val);
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_or(T* dest, T val, MemoryOrder, MemoryScopeDevice) {
-  __threadfence();
-  T return_val = atomicOr(dest, val);
-  __threadfence();
-  return return_val;
-}
-
-template <class T, class MemoryOrder>
-__device__ inline
-    typename std::enable_if<Impl::is_cuda_atomic_integer_type<T>::value, T>::type
-    device_atomic_fetch_or(T* dest, T val, MemoryOrder, MemoryScopeCore) {
-  return device_atomic_fetch_or(dest, val, MemoryOrder(), MemoryScopeDevice());
-}
 }  // namespace desul
 #endif
 
-#endif  // DESUL_HAVE_CUDA_ATOMICS
 #endif

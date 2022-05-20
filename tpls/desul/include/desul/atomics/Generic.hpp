@@ -13,6 +13,9 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #include "desul/atomics/Compare_Exchange.hpp"
 #include "desul/atomics/Lock_Array.hpp"
 #include "desul/atomics/Macros.hpp"
+
+#include <type_traits>
+
 // Combination operands to be used in an Compare and Exchange based atomic
 // operation
 namespace desul {
@@ -175,7 +178,9 @@ struct LoadOper {
 
 #include <desul/atomics/Generic_Device.hpp>
 #include <desul/atomics/Generic_Host.hpp>
+#ifdef DESUL_HAVE_CUDA_ATOMICS
 #include <desul/atomics/CUDA.hpp>
+#endif
 #include <desul/atomics/GCC.hpp>
 #ifdef DESUL_HAVE_HIP_ATOMICS
 #include <desul/atomics/HIP.hpp>
