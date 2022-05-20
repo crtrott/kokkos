@@ -177,7 +177,9 @@ struct LoadOper {
 #include <desul/atomics/Generic_Host.hpp>
 #include <desul/atomics/CUDA.hpp>
 #include <desul/atomics/GCC.hpp>
+#ifdef DESUL_HAVE_HIP_ATOMICS
 #include <desul/atomics/HIP.hpp>
+#endif
 #include <desul/atomics/OpenMP.hpp>
 #include <desul/atomics/SYCL.hpp>
 
