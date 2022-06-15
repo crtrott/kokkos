@@ -63,7 +63,6 @@ namespace Impl {
 
 int g_openmp_hardware_max_threads = 1;
 
-thread_local int t_openmp_hardware_id = 0;
 // FIXME_OPENMP we can remove this after we remove partition_master
 thread_local OpenMPInternal *t_openmp_instance = nullptr;
 
@@ -317,10 +316,7 @@ void OpenMPInternal::initialize(int thread_count) {
 
 // setup thread local
 #pragma omp parallel num_threads(Impl::g_openmp_hardware_max_threads)
-    {
-      Impl::t_openmp_hardware_id = omp_get_thread_num();
-      Impl::SharedAllocationRecord<void, void>::tracking_enable();
-    }
+    { Impl::SharedAllocationRecord<void, void>::tracking_enable(); }
 
     auto &instance       = OpenMPInternal::singleton();
     instance.m_pool_size = Impl::g_openmp_hardware_max_threads;
@@ -376,10 +372,7 @@ void OpenMPInternal::finalize() {
     (void)nthreads;
 
 #pragma omp parallel num_threads(nthreads)
-    {
-      Impl::t_openmp_hardware_id = 0;
-      Impl::SharedAllocationRecord<void, void>::tracking_disable();
-    }
+    { Impl::SharedAllocationRecord<void, void>::tracking_disable(); }
 
     // allow main thread to track
     Impl::SharedAllocationRecord<void, void>::tracking_enable();

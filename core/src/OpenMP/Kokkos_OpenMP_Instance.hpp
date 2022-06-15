@@ -75,7 +75,6 @@ class OpenMPInternal;
 
 extern int g_openmp_hardware_max_threads;
 
-extern thread_local int t_openmp_hardware_id;
 // FIXME_OPENMP we can remove this after we remove partition_master
 extern thread_local OpenMPInternal* t_openmp_instance;
 
@@ -331,7 +330,7 @@ class UniqueToken<OpenMP, UniqueTokenScope::Global> {
   /// \brief acquire value such that 0 <= value < size()
   KOKKOS_INLINE_FUNCTION
   int acquire() const noexcept {
-    KOKKOS_IF_ON_HOST((return Kokkos::Impl::t_openmp_hardware_id;))
+    KOKKOS_IF_ON_HOST((return omp_get_thread_num();))
 
     KOKKOS_IF_ON_DEVICE((return 0;))
   }
@@ -349,7 +348,7 @@ inline int OpenMP::impl_thread_pool_size(int depth, OpenMP const& exec_space) {
 
 KOKKOS_INLINE_FUNCTION
 int OpenMP::impl_hardware_thread_id() noexcept {
-  KOKKOS_IF_ON_HOST((return Impl::t_openmp_hardware_id;))
+  KOKKOS_IF_ON_HOST((return omp_get_thread_num();))
 
   KOKKOS_IF_ON_DEVICE((return -1;))
 }
@@ -372,7 +371,7 @@ inline std::vector<OpenMP> create_OpenMP_instances(
     Kokkos::abort("Kokkos::abort: Partition weights vector is empty.");
   }
   std::vector<OpenMP> instances(weights.size());
-  double total_weight = std::accumulate(weights.begin(), weights.end(), 0);
+  double total_weight = std::accumulate(weights.begin(), weights.end(), 0.);
   int const main_pool_size =
       main_instance.impl_internal_space_instance()->thread_pool_size();
 
@@ -382,6 +381,9 @@ inline std::vector<OpenMP> create_OpenMP_instances(
     if (instance_pool_size == 0) {
       Kokkos::abort("Kokkos::abort: Instance has no resource allocated to it");
     }
+    std::cout << "instance " << i << " " << instance_pool_size << " "
+              << weights[i] << " " << total_weight << " " << main_pool_size
+              << std::endl;
     instances[i] = OpenMP(instance_pool_size);
     resources_left -= instance_pool_size;
   }
