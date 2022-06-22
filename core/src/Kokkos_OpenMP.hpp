@@ -137,8 +137,7 @@ class OpenMP {
       int requested_partition_size = 0);
 #endif
 
-  // use UniqueToken
-  static int concurrency();
+  static int concurrency(OpenMP const& = OpenMP());
 
   static void impl_initialize(InitializationSettings const&);
 
