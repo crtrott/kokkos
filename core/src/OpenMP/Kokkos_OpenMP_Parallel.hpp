@@ -379,6 +379,8 @@ class ParallelReduce<FunctorType, Kokkos::RangePolicy<Traits...>, ReducerType,
     const size_t pool_reduce_bytes =
         Analysis::value_size(ReducerConditional::select(m_functor, m_reducer));
 
+    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
                                    0  // team_shared_bytes
@@ -538,6 +540,8 @@ class ParallelReduce<FunctorType, Kokkos::MDRangePolicy<Traits...>, ReducerType,
 
     const size_t pool_reduce_bytes =
         Analysis::value_size(ReducerConditional::select(m_functor, m_reducer));
+
+    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
 
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
@@ -823,6 +827,8 @@ class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>,
     const int value_count          = Analysis::value_count(m_functor);
     const size_t pool_reduce_bytes = 2 * Analysis::value_size(m_functor);
 
+    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
                                    0  // team_shared_bytes
@@ -971,6 +977,8 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
     const size_t team_reduce_size  = TEAM_REDUCE_SIZE * m_policy.team_size();
     const size_t team_shared_size  = m_shmem_size;
     const size_t thread_local_size = 0;  // Never shrinks
+
+    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
 
     m_instance->resize_thread_data(pool_reduce_size, team_reduce_size,
                                    team_shared_size, thread_local_size);
@@ -1123,6 +1131,8 @@ class ParallelReduce<FunctorType, Kokkos::TeamPolicy<Properties...>,
     const size_t team_reduce_size  = TEAM_REDUCE_SIZE * m_policy.team_size();
     const size_t team_shared_size  = m_shmem_size + m_policy.scratch_size(1);
     const size_t thread_local_size = 0;  // Never shrinks
+
+    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
 
     m_instance->resize_thread_data(pool_reduce_size, team_reduce_size,
                                    team_shared_size, thread_local_size);
