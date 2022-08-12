@@ -370,17 +370,21 @@ class GraphNodeRef {
                                         Kokkos::Impl::KernelInGraphProperty{});
 
     using predec_functor_t = decltype(m_node_impl->m_kernel.m_functor);
+    using predec_policy_t = Kokkos::Impl::remove_cvref_t<decltype(m_node_impl->m_kernel.m_policy)>;
 
-    Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor> f(m_node_impl->m_kernel.m_functor,functor,m_node_impl->is_pipelined());
+    using fused_policy_t = Kokkos::Impl::CommonPipelinePolicy<predec_policy_t, decltype(policy)>;
+    using fused_kernel_t = Kokkos::Impl::PipelineFunctor<predec_functor_t, Functor, fused_policy_t>;
+    fused_kernel_t f(m_node_impl->m_kernel.m_functor, functor, m_node_impl->is_pipelined());
     //print (*m_node_impl._M_ptr).m_kernel.m_functor
-    using next_policy_t = decltype(policy);
+    using next_policy_t = typename fused_policy_t::common_policy_t;
+    next_policy_t next_policy = fused_policy_t::policy(m_node_impl->m_kernel.m_policy, policy);
     using next_kernel_t =
         Kokkos::Impl::GraphNodeKernelImpl<ExecutionSpace, next_policy_t,
-                                          std::decay_t<Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor>>,
+                                          std::decay_t<fused_kernel_t>,
                                           Kokkos::ParallelForTag>;
-    return this->_then_kernel_pipelined(next_kernel_t{std::move(arg_name), policy.space(),
-                                            (Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor>&&) f,
-                                            (Policy &&) policy});
+    return this->_then_kernel_pipelined(next_kernel_t{std::move(arg_name), next_policy.space(),
+                                            (fused_kernel_t&&) f,
+                                            next_policy});
 //    return *this;
   }
 

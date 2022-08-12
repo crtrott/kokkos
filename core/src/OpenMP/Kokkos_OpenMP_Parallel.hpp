@@ -83,8 +83,8 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::OpenMP> {
   OpenMPInternal* m_instance;
  public:
   const FunctorType m_functor;
- private:
   const Policy m_policy;
+ private:
 
   inline static void exec_range(const FunctorType& functor, const Member ibeg,
                                 const Member iend) {
@@ -917,14 +917,16 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   enum { TEAM_REDUCE_SIZE = 512 };
 
   using Policy =
-      Kokkos::Impl::TeamPolicyInternal<Kokkos::OpenMP, Properties...>;
+      Kokkos::TeamPolicy<Properties...>;
   using WorkTag  = typename Policy::work_tag;
   using SchedTag = typename Policy::schedule_type::type;
   using Member   = typename Policy::member_type;
 
   OpenMPInternal* m_instance;
+ public:
   const FunctorType m_functor;
   const Policy m_policy;
+ private:
   const size_t m_shmem_size;
 
   template <class TagType>

@@ -54,19 +54,132 @@
 namespace Kokkos {
 namespace Impl {
 
-template<class Functor1, class Functor2>
+
+// Call Wrappers for Pipelining: knows how to combine Range and TeamPolicy
+template<class Policy1, class Policy2>
+struct CommonPipelinePolicy;
+
+template<class ... Args1, class ... Args2>
+struct CommonPipelinePolicy<Kokkos::RangePolicy<Args1...>, Kokkos::RangePolicy<Args2...>> {
+  using common_policy_t = Kokkos::RangePolicy<Args1...>;
+  using common_handle_t = typename common_policy_t::member_type;
+  using policy1_t = Kokkos::RangePolicy<Args1...>;
+  using policy2_t = Kokkos::RangePolicy<Args2...>;
+  using handle1_t = typename policy1_t::member_type;
+  using handle2_t = typename policy2_t::member_type;
+
+  static constexpr
+  const common_policy_t& policy(const policy1_t& p1, const policy2_t&) { return p1; }
+
+  template<class Functor1, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call1(const Functor1& f1, const common_handle_t& h, RedArgs& ... red_args) {
+    f1(static_cast<handle1_t>(h), red_args...);
+  }
+  template<class Functor2, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call2(const Functor2& f2, const common_handle_t& h, RedArgs& ... red_args) {
+    f2(static_cast<handle2_t>(h), red_args...);
+  }
+};
+
+template<class ... Args1, class ... Args2>
+struct CommonPipelinePolicy<Kokkos::TeamPolicy<Args1...>, Kokkos::RangePolicy<Args2...>> {
+  using common_policy_t = Kokkos::TeamPolicy<Args1...>;
+  using common_handle_t = typename common_policy_t::member_type;
+  using policy1_t = Kokkos::TeamPolicy<Args1...>;
+  using policy2_t = Kokkos::RangePolicy<Args2...>;
+  using handle1_t = typename policy1_t::member_type;
+  using handle2_t = typename policy2_t::member_type;
+
+  static constexpr
+  const common_policy_t& policy(const policy1_t& p1, const policy2_t&) { return p1; }
+
+  template<class Functor1, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call1(const Functor1& f1, const common_handle_t& h, RedArgs& ... red_args) {
+    f1(h, red_args...);
+    h.team_barrier();
+  }
+  template<class Functor2, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call2(const Functor2& f2, const common_handle_t& h, RedArgs& ... red_args) {
+    Kokkos::single(Kokkos::PerTeam(h), [&]() {
+      f2(static_cast<handle2_t>(h.league_rank()), red_args...);
+    });
+  }
+};
+
+template<class ... Args1, class ... Args2>
+struct CommonPipelinePolicy<Kokkos::RangePolicy<Args1...>, Kokkos::TeamPolicy<Args2...>> {
+  using common_policy_t = Kokkos::TeamPolicy<Args2...>;
+  using common_handle_t = typename common_policy_t::member_type;
+  using policy1_t = Kokkos::RangePolicy<Args1...>;
+  using policy2_t = Kokkos::TeamPolicy<Args2...>;
+  using handle1_t = typename policy1_t::member_type;
+  using handle2_t = typename policy2_t::member_type;
+
+  static constexpr
+  const common_policy_t policy(const policy1_t&, const policy2_t& p2) { return p2; }
+
+  template<class Functor1, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call1(const Functor1& f1, const common_handle_t& h, RedArgs& ... red_args) {
+    Kokkos::single(Kokkos::PerTeam(h), [&]() {
+      f1(static_cast<handle1_t>(h.league_rank()), red_args...);
+    });
+    h.team_barrier();
+  }
+  template<class Functor2, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call2(const Functor2& f2, const common_handle_t& h, RedArgs& ... red_args) {
+    f2(h, red_args...);
+  }
+};
+
+template<class ... Args1, class ... Args2>
+struct CommonPipelinePolicy<Kokkos::TeamPolicy<Args1...>, Kokkos::TeamPolicy<Args2...>> {
+  using common_policy_t = Kokkos::TeamPolicy<Args1...>;
+  using common_handle_t = typename common_policy_t::member_type;
+  using policy1_t = Kokkos::TeamPolicy<Args1...>;
+  using policy2_t = Kokkos::RangePolicy<Args2...>;
+  using handle1_t = typename policy1_t::member_type;
+  using handle2_t = typename policy2_t::member_type;
+
+  static constexpr
+  const common_policy_t& policy(const policy1_t& p1, const policy2_t&) { return p1; }
+
+  template<class Functor1, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call1(const Functor1& f1, const common_handle_t& h, RedArgs& ... red_args) {
+    f1(h, red_args...);
+    h.team_barrier();
+  }
+  template<class Functor2, class ... RedArgs>
+  KOKKOS_FUNCTION static constexpr
+  void call2(const Functor2& f2, const common_handle_t& h, RedArgs& ... red_args) {
+    f2(h, red_args...);
+  }
+};
+
+// Fused Kernel Wrapper for two parallel_for calls
+template<class Functor1, class Functor2, class CommonPolicy>
 struct PipelineFunctor {
   Functor1 f1;
   Functor2 f2;
   bool is_pipelined_elsewhere;
 
+  using common_t = CommonPolicy;
+  using policy_t = typename common_t::common_policy_t;
+  using handle_t = typename common_t::common_handle_t;
+
   PipelineFunctor(const Functor1& f1_, const Functor2& f2_, bool is_p):f1(f1_),f2(f2_),is_pipelined_elsewhere(is_p) {}
 
   KOKKOS_FUNCTION
-  void operator()(int i) const {
+  void operator()(const handle_t& h) const {
     if(!is_pipelined_elsewhere)
-      f1(i);
-    f2(i);
+      common_t::call1(f1, h);
+    common_t::call2(f2, h);
   }
 };
 

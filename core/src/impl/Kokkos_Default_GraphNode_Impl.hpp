@@ -154,16 +154,17 @@ struct GraphNodeBackendSpecificDetails {
     KOKKOS_EXPECTS(bool(m_kernel_ptr) || m_has_executed || m_is_pipelined)
     // Just execute the predecessor here, since calling set_predecessor()
     // delegates the responsibility for running it to us.
-    if (!m_has_executed && !m_is_pipelined) {
+    if (!m_has_executed) {
       // I'm pretty sure this doesn't need to be atomic under our current
       // supported semantics, but instinct I have feels like it should be...
       m_has_executed = true;
       for (auto const& predecessor : m_predecessors) {
         predecessor->execute_node();
       }
-      m_kernel_ptr->execute_kernel();
+      if(!m_is_pipelined)
+        m_kernel_ptr->execute_kernel();
     }
-    KOKKOS_ENSURES(m_has_executed || m_is_pipelined)
+    KOKKOS_ENSURES(m_has_executed)
   }
 
   // This is gross, but for the purposes of our simple default implementation...
