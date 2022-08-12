@@ -54,6 +54,22 @@
 namespace Kokkos {
 namespace Impl {
 
+template<class Functor1, class Functor2>
+struct PipelineFunctor {
+  Functor1 f1;
+  Functor2 f2;
+  bool is_pipelined_elsewhere;
+
+  PipelineFunctor(const Functor1& f1_, const Functor2& f2_, bool is_p):f1(f1_),f2(f2_),is_pipelined_elsewhere(is_p) {}
+
+  KOKKOS_FUNCTION
+  void operator()(int i) const {
+    if(!is_pipelined_elsewhere)
+      f1(i);
+    f2(i);
+  }
+};
+
 //==============================================================================
 // <editor-fold desc="is_compatible_type_erasure"> {{{1
 

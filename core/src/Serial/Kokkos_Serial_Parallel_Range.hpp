@@ -55,11 +55,14 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::Serial> {
  private:
   using Policy = Kokkos::RangePolicy<Traits...>;
 
+ public:
   const FunctorType m_functor;
   const Policy m_policy;
+ private:
 
   template <class TagType>
   std::enable_if_t<std::is_void<TagType>::value> exec() const {
+          printf("Execute Kernel\n");
     const typename Policy::member_type e = m_policy.end();
     for (typename Policy::member_type i = m_policy.begin(); i < e; ++i) {
       m_functor(i);

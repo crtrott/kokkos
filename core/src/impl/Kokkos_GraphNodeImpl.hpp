@@ -156,7 +156,7 @@ struct GraphNodeImpl<ExecutionSpace, Kernel,
   // </editor-fold> end public member types }}}2
   //----------------------------------------------------------------------------
 
- private:
+ public:
   //----------------------------------------------------------------------------
   // <editor-fold desc="private data members"> {{{2
 

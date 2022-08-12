@@ -74,6 +74,7 @@ struct GraphNodeBackendSpecificDetails {
 
   Kokkos::ObservingRawPtr<default_kernel_impl_t> m_kernel_ptr = nullptr;
 
+  bool m_is_pipelined = false;
   bool m_has_executed = false;
   bool m_is_aggregate = false;
   bool m_is_root      = false;
@@ -89,7 +90,7 @@ struct GraphNodeBackendSpecificDetails {
 
   explicit GraphNodeBackendSpecificDetails(
       _graph_node_is_root_ctor_tag) noexcept
-      : m_has_executed(true), m_is_root(true) {}
+      : m_has_executed(true), m_is_root(true) { printf("Root %p\n",this); }
 
   GraphNodeBackendSpecificDetails(GraphNodeBackendSpecificDetails const&) =
       delete;
@@ -109,15 +110,28 @@ struct GraphNodeBackendSpecificDetails {
   //----------------------------------------------------------------------------
 
  public:
+  bool is_pipelined() { return m_is_pipelined; }
+
   void set_kernel(default_kernel_impl_t& arg_kernel) {
     KOKKOS_EXPECTS(m_kernel_ptr == nullptr)
     m_kernel_ptr = &arg_kernel;
+    //printf("set_kernel %p\n",this);
+  }
+
+  void reset_kernel(default_kernel_impl_t& arg_kernel) {
+    m_kernel_ptr = &arg_kernel;
+    //printf("reset_kernel %p\n",this);
   }
 
   void set_kernel(default_aggregate_kernel_impl_t& arg_kernel) {
     KOKKOS_EXPECTS(m_kernel_ptr == nullptr)
     m_kernel_ptr   = &arg_kernel;
     m_is_aggregate = true;
+    //printf("set_kernel aggregate  %p\n",this);
+  }
+
+  void set_pipelined() {
+    m_is_pipelined = true;
   }
 
   void set_predecessor(
@@ -130,15 +144,17 @@ struct GraphNodeBackendSpecificDetails {
     KOKKOS_EXPECTS(bool(arg_pred_impl))
     KOKKOS_EXPECTS(!m_has_executed)
     m_predecessors.push_back(std::move(arg_pred_impl));
+    //printf("set_predecessor  %p %p\n",this,arg_pred_impl);
   }
 
   void execute_node() {
     // This node could have already been executed as the predecessor of some
     // other
-    KOKKOS_EXPECTS(bool(m_kernel_ptr) || m_has_executed)
+    //printf("execute_node: %p\n",this);
+    KOKKOS_EXPECTS(bool(m_kernel_ptr) || m_has_executed || m_is_pipelined)
     // Just execute the predecessor here, since calling set_predecessor()
     // delegates the responsibility for running it to us.
-    if (!m_has_executed) {
+    if (!m_has_executed && !m_is_pipelined) {
       // I'm pretty sure this doesn't need to be atomic under our current
       // supported semantics, but instinct I have feels like it should be...
       m_has_executed = true;
@@ -147,7 +163,7 @@ struct GraphNodeBackendSpecificDetails {
       }
       m_kernel_ptr->execute_kernel();
     }
-    KOKKOS_ENSURES(m_has_executed)
+    KOKKOS_ENSURES(m_has_executed || m_is_pipelined)
   }
 
   // This is gross, but for the purposes of our simple default implementation...

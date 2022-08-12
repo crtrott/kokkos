@@ -200,6 +200,38 @@ class GraphNodeRef {
     return rv;
   }
 
+  template <class NextKernelDeduced>
+  auto _then_kernel_pipelined(NextKernelDeduced&& arg_kernel) const {
+    // readability note:
+    //   std::remove_cvref_t<NextKernelDeduced> is a specialization of
+    //   Kokkos::Impl::GraphNodeKernelImpl:
+    static_assert(Kokkos::Impl::is_specialization_of<
+                      Kokkos::Impl::remove_cvref_t<NextKernelDeduced>,
+                      Kokkos::Impl::GraphNodeKernelImpl>::value,
+                  "Kokkos internal error");
+
+    auto graph_ptr = m_graph_impl.lock();
+    KOKKOS_EXPECTS(bool(graph_ptr))
+
+    using next_kernel_t = Kokkos::Impl::remove_cvref_t<NextKernelDeduced>;
+
+    using return_t = GraphNodeRef<ExecutionSpace, next_kernel_t, GraphNodeRef>;
+
+    auto rv = Kokkos::Impl::GraphAccess::make_graph_node_ref(
+        m_graph_impl,
+        Kokkos::Impl::GraphAccess::make_node_shared_ptr<
+            typename return_t::node_impl_t>(
+            m_node_impl->execution_space_instance(),
+            Kokkos::Impl::_graph_node_kernel_ctor_tag{},
+            (NextKernelDeduced &&) arg_kernel,
+            // *this is the predecessor
+            Kokkos::Impl::_graph_node_predecessor_ctor_tag{}, *this));
+
+    graph_ptr->add_node_pipelined(rv.m_node_impl, *this);
+    KOKKOS_ENSURES(bool(rv.m_node_impl))
+    return rv;
+  }
+
   //----------------------------------------------------------------------------
   // <editor-fold desc="Private constructors"> {{{2
 
@@ -303,6 +335,53 @@ class GraphNodeRef {
     return this->_then_kernel(next_kernel_t{std::move(arg_name), policy.space(),
                                             (Functor &&) functor,
                                             (Policy &&) policy});
+  }
+
+  template <
+      class Policy, class Functor,
+      std::enable_if_t<
+          // equivalent to:
+          //   requires Kokkos::ExecutionPolicy<remove_cvref_t<Policy>>
+          is_execution_policy<Kokkos::Impl::remove_cvref_t<Policy>>::value,
+          // --------------------
+          int> = 0>
+  auto then_parallel_for_pipelined(std::string arg_name, Policy&& arg_policy,
+                         const Functor& functor) const {
+    //----------------------------------------
+    KOKKOS_EXPECTS(!m_graph_impl.expired())
+    KOKKOS_EXPECTS(bool(m_node_impl))
+    // TODO @graph restore this expectation once we add comparability to space
+    //      instances
+    // KOKKOS_EXPECTS(
+    //   arg_policy.space() == m_graph_impl->get_execution_space());
+
+    // needs to static assert constraint: DataParallelFunctor<Functor>
+
+    using policy_t = Kokkos::Impl::remove_cvref_t<Policy>;
+    // constraint check: same execution space type (or defaulted, maybe?)
+    static_assert(
+        std::is_same<typename policy_t::execution_space,
+                     execution_space>::value,
+        // TODO @graph make defaulted execution space work
+        //|| policy_t::execution_space_is_defaulted,
+        "Execution Space mismatch between execution policy and graph");
+
+    auto policy = Experimental::require((Policy &&) arg_policy,
+                                        Kokkos::Impl::KernelInGraphProperty{});
+
+    using predec_functor_t = decltype(m_node_impl->m_kernel.m_functor);
+
+    Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor> f(m_node_impl->m_kernel.m_functor,functor,m_node_impl->is_pipelined());
+    //print (*m_node_impl._M_ptr).m_kernel.m_functor
+    using next_policy_t = decltype(policy);
+    using next_kernel_t =
+        Kokkos::Impl::GraphNodeKernelImpl<ExecutionSpace, next_policy_t,
+                                          std::decay_t<Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor>>,
+                                          Kokkos::ParallelForTag>;
+    return this->_then_kernel_pipelined(next_kernel_t{std::move(arg_name), policy.space(),
+                                            (Kokkos::Impl::PipelineFunctor<predec_functor_t,Functor>&&) f,
+                                            (Policy &&) policy});
+//    return *this;
   }
 
   template <

@@ -81,7 +81,9 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::OpenMP> {
   using Member    = typename Policy::member_type;
 
   OpenMPInternal* m_instance;
+ public:
   const FunctorType m_functor;
+ private:
   const Policy m_policy;
 
   inline static void exec_range(const FunctorType& functor, const Member ibeg,

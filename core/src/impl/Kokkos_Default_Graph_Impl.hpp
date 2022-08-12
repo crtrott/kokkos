@@ -122,6 +122,17 @@ struct GraphImpl : private ExecutionSpaceInstanceStorage<ExecutionSpace> {
     m_sinks.insert(std::move(spot), std::move(arg_node_ptr));
   }
 
+  template <class NodeImpl, class PredecessorRef>
+  // requires PredecessorRef is a specialization of GraphNodeRef that has
+  // already been added to this graph and NodeImpl is a specialization of
+  // GraphNodeImpl that has already been added to this graph.
+  void add_node_pipelined(std::shared_ptr<NodeImpl> const& arg_node_ptr, PredecessorRef arg_pred_ref) {
+    add_node(arg_node_ptr);
+    add_predecessor(arg_node_ptr, arg_pred_ref);
+    auto pred_ptr      = GraphAccess::get_node_ptr(arg_pred_ref);
+    pred_ptr->node_details_t::set_pipelined();
+  }
+
   template <class NodeImplPtr, class PredecessorRef>
   // requires PredecessorRef is a specialization of GraphNodeRef that has
   // already been added to this graph and NodeImpl is a specialization of
