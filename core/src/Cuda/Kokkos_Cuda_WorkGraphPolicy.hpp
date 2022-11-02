@@ -83,7 +83,7 @@ class ParallelFor<FunctorType, Kokkos::WorkGraphPolicy<Traits...>,
 
     Kokkos::Impl::CudaParallelLaunch<Self>(
         *this, grid, block, shared, Cuda().impl_internal_space_instance(),
-        false);
+        CachePreference::CachePreferL1);
   }
 
   inline ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
