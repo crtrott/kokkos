@@ -356,7 +356,13 @@ class ParallelReduce<FunctorType, Kokkos::RangePolicy<Traits...>, ReducerType,
     const size_t pool_reduce_bytes =
         Analysis::value_size(ReducerConditional::select(m_functor, m_reducer));
 
-    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+    int lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                              desul::MemoryOrderAcquire(),
+                                              desul::MemoryScopeDevice());
+    while (lock == 1)
+      lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                            desul::MemoryOrderAcquire(),
+                                            desul::MemoryScopeDevice());
 
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
@@ -430,6 +436,9 @@ class ParallelReduce<FunctorType, Kokkos::RangePolicy<Traits...>, ReducerType,
         m_result_ptr[j] = ptr[j];
       }
     }
+    desul::atomic_store(&m_instance->m_pool_mutex, 0,
+                        desul::MemoryOrderRelease(),
+                        desul::MemoryScopeDevice());
   }
 
   //----------------------------------------
@@ -528,7 +537,13 @@ class ParallelReduce<FunctorType, Kokkos::MDRangePolicy<Traits...>, ReducerType,
     const size_t pool_reduce_bytes =
         Analysis::value_size(ReducerConditional::select(m_functor, m_reducer));
 
-    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+    int lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                              desul::MemoryOrderAcquire(),
+                                              desul::MemoryScopeDevice());
+    while (lock == 1)
+      lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                            desul::MemoryOrderAcquire(),
+                                            desul::MemoryScopeDevice());
 
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
@@ -613,6 +628,9 @@ class ParallelReduce<FunctorType, Kokkos::MDRangePolicy<Traits...>, ReducerType,
         m_result_ptr[j] = ptr[j];
       }
     }
+    desul::atomic_store(&m_instance->m_pool_mutex, 0,
+                        desul::MemoryOrderRelease(),
+                        desul::MemoryScopeDevice());
   }
 
   //----------------------------------------
@@ -849,7 +867,13 @@ class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>,
     const int value_count          = Analysis::value_count(m_functor);
     const size_t pool_reduce_bytes = 2 * Analysis::value_size(m_functor);
 
-    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+    int lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                              desul::MemoryOrderAcquire(),
+                                              desul::MemoryScopeDevice());
+    while (lock == 1)
+      lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                            desul::MemoryOrderAcquire(),
+                                            desul::MemoryScopeDevice());
 
     m_instance->resize_thread_data(pool_reduce_bytes, 0  // team_reduce_bytes
                                    ,
@@ -920,6 +944,9 @@ class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>,
         *m_result_ptr = update_base;
       }
     }
+    desul::atomic_store(&m_instance->m_pool_mutex, 0,
+                        desul::MemoryOrderRelease(),
+                        desul::MemoryScopeDevice());
   }
 
   //----------------------------------------
@@ -1019,7 +1046,13 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
     const size_t team_shared_size  = m_shmem_size;
     const size_t thread_local_size = 0;  // Never shrinks
 
-    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+    int lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                              desul::MemoryOrderAcquire(),
+                                              desul::MemoryScopeDevice());
+    while (lock == 1)
+      lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                            desul::MemoryOrderAcquire(),
+                                            desul::MemoryScopeDevice());
 
     m_instance->resize_thread_data(pool_reduce_size, team_reduce_size,
                                    team_shared_size, thread_local_size);
@@ -1066,6 +1099,9 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 
       data.disband_team();
     }
+    desul::atomic_store(&m_instance->m_pool_mutex, 0,
+                        desul::MemoryOrderRelease(),
+                        desul::MemoryScopeDevice());
   }
 
   inline ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
@@ -1180,7 +1216,13 @@ class ParallelReduce<FunctorType, Kokkos::TeamPolicy<Properties...>,
     const size_t team_shared_size  = m_shmem_size + m_policy.scratch_size(1);
     const size_t thread_local_size = 0;  // Never shrinks
 
-    std::lock_guard<std::mutex> lock(m_instance->m_pool_mutex);
+    int lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                              desul::MemoryOrderAcquire(),
+                                              desul::MemoryScopeDevice());
+    while (lock == 1)
+      lock = desul::atomic_compare_exchange(&m_instance->m_pool_mutex, 0, 1,
+                                            desul::MemoryOrderAcquire(),
+                                            desul::MemoryScopeDevice());
 
     m_instance->resize_thread_data(pool_reduce_size, team_reduce_size,
                                    team_shared_size, thread_local_size);
@@ -1275,6 +1317,9 @@ class ParallelReduce<FunctorType, Kokkos::TeamPolicy<Properties...>,
         m_result_ptr[j] = ptr[j];
       }
     }
+    desul::atomic_store(&m_instance->m_pool_mutex, 0,
+                        desul::MemoryOrderRelease(),
+                        desul::MemoryScopeDevice());
   }
 
   //----------------------------------------

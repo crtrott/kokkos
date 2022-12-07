@@ -74,7 +74,7 @@ class OpenMPInternal {
  public:
   friend class Kokkos::OpenMP;
 
-  std::mutex m_pool_mutex;
+  int m_pool_mutex;
 
   static OpenMPInternal& singleton();
 

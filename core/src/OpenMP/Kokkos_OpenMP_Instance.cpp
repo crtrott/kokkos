@@ -237,6 +237,8 @@ void OpenMPInternal::initialize(int thread_count) {
 )WARNING" << std::endl;
     }
 
+    m_pool_mutex = 0;
+
     OpenMP::memory_space space;
 
     // Before any other call to OMP query the maximum number of threads
