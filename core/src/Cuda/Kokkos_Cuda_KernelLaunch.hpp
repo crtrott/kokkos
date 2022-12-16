@@ -140,22 +140,26 @@ inline void check_shmem_request(CudaInternal const* cuda_instance, int shmem) {
 // KernelFuncPtr does not necessarily contain that type information.
 template <class DriverType, class LaunchBounds, class KernelFuncPtr>
 inline void configure_shmem_preference(KernelFuncPtr const& func,
-                                       CachePreference prefer_shmem) {
+                                       size_t shmem_per_sm, size_t shmem_per_block,
+                                       size_t block_size, size_t maxthreads_per_sm,
+                                       size_t max_blocks_regs, size_t occupancy) {
 #ifndef KOKKOS_ARCH_KEPLER
-
+  size_t numthreads_desired = ((maxthreads_per_sm*(100/occupancy)+31)/32)*32;
+  size_t numblocks_desired = (numthreads_desired + block_size*0.8)/block_size;
+  numblocks_desired = ::std::min(max_blocks_regs, numblocks_desired);
+  if(numblocks_desired == 0) numblocks_desired = 1;
+  int carveout = shmem_per_block == 0? 0 : 100*shmem_per_sm/(numblocks_desired*shmem_per_block);
+  if(carveout > 100) carveout = 100;
   // On Kepler the L1 has no benefit since it doesn't cache reads
   // Use `cudaFuncSetAttribute` call from cuda to set the SharedMemoryCarveout
   // preference.
   auto set_cache_config = [&] {
     KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFuncSetAttribute(
-        func, cudaFuncAttributePreferredSharedMemoryCarveout,
-        (prefer_shmem == CachePreference::PreferL1)
-            ? 25
-            : (prefer_shmem == CachePreference::PreferShared) ? 75 : 50));
-    return prefer_shmem;
+        func, cudaFuncAttributePreferredSharedMemoryCarveout, carveout));
+    return carveout;
   };
-  static CachePreference cache_config_preference_cached = set_cache_config();
-  if (cache_config_preference_cached != prefer_shmem) {
+  static int cache_config_preference_cached = set_cache_config();
+  if (cache_config_preference_cached != carveout) {
     cache_config_preference_cached = set_cache_config();
   }
 #else
@@ -362,8 +366,8 @@ struct CudaParallelLaunchKernelInvoker<
 
     if (!Impl::is_empty_launch(grid, block)) {
       Impl::check_shmem_request(cuda_instance, shmem);
-      Impl::configure_shmem_preference<DriverType, LaunchBounds>(
-          base_t::get_kernel_func(), prefer_shmem);
+/*      Impl::configure_shmem_preference<DriverType, LaunchBounds>(
+          base_t::get_kernel_func(), prefer_shmem);*/
 
       void const* args[] = {&driver};
 
@@ -454,8 +458,8 @@ struct CudaParallelLaunchKernelInvoker<
 
     if (!Impl::is_empty_launch(grid, block)) {
       Impl::check_shmem_request(cuda_instance, shmem);
-      Impl::configure_shmem_preference<DriverType, LaunchBounds>(
-          base_t::get_kernel_func(), prefer_shmem);
+/*      Impl::configure_shmem_preference<DriverType, LaunchBounds>(
+          base_t::get_kernel_func(), prefer_shmem);*/
 
       auto* driver_ptr = Impl::allocate_driver_storage_for_kernel(driver);
 
@@ -627,13 +631,34 @@ struct CudaParallelLaunchImpl<
       // configuration is `cudaFuncCachePreferL1`.  If the amount of dynamic
       // shared memory computed is actually smaller than `shmem` we overwrite
       // `shmem` and set `prefer_shmem` to `false`.
-      modify_launch_configuration_if_desired_occupancy_is_specified(
+/*      modify_launch_configuration_if_desired_occupancy_is_specified(
           driver.get_policy(), cuda_instance->m_deviceProp,
-          get_cuda_func_attributes(), block, shmem, prefer_shmem);
+          get_cuda_func_attributes(), block, shmem, prefer_shmem);*/
 
+      const auto & device_props = cuda_instance->m_deviceProp;
+      auto func_attr = get_cuda_func_attributes();
+      const size_t maxshmem_per_sm = device_props.sharedMemPerMultiprocessor;
+      const size_t shmem_per_block = shmem + func_attr.sharedSizeBytes;
+      const size_t block_size = block.x * block.y * block.z;
+      const size_t maxthreads_per_sm = device_props.maxThreadsPerMultiProcessor;
+      // Limits due do registers/SM
+      int const regs_per_sm     = device_props.regsPerMultiprocessor;
+      int const regs_per_thread = func_attr.numRegs;
+      // The granularity of register allocation is chunks of 256 registers per warp
+      // -> 8 registers per thread
+      int const allocated_regs_per_thread = 8 * ((regs_per_thread + 8 - 1) / 8);
+      int const max_blocks_regs =
+         regs_per_sm / (allocated_regs_per_thread * block_size);
+      int desired_occupancy = 100;
+      if constexpr (DriverType::Policy::experimental_contains_desired_occupancy) {
+        desired_occupancy = driver.get_policy().impl_get_desired_occupancy().value();
+      }
       Impl::configure_shmem_preference<
           DriverType, Kokkos::LaunchBounds<MaxThreadsPerBlock, MinBlocksPerSM>>(
-          base_t::get_kernel_func(), prefer_shmem);
+          base_t::get_kernel_func(),
+          maxshmem_per_sm, shmem_per_block,
+          block_size, maxthreads_per_sm,
+          max_blocks_regs, desired_occupancy);
 
       ensure_cuda_lock_arrays_on_device();
 
