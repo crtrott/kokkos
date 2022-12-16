@@ -635,6 +635,7 @@ struct CudaParallelLaunchImpl<
           driver.get_policy(), cuda_instance->m_deviceProp,
           get_cuda_func_attributes(), block, shmem, prefer_shmem);*/
 
+      if constexpr (DriverType::Policy::experimental_contains_desired_occupancy) {
       const auto & device_props = cuda_instance->m_deviceProp;
       auto func_attr = get_cuda_func_attributes();
       const size_t maxshmem_per_sm = device_props.sharedMemPerMultiprocessor;
@@ -650,15 +651,14 @@ struct CudaParallelLaunchImpl<
       int const max_blocks_regs =
          regs_per_sm / (allocated_regs_per_thread * block_size);
       int desired_occupancy = 100;
-      if constexpr (DriverType::Policy::experimental_contains_desired_occupancy) {
         desired_occupancy = driver.get_policy().impl_get_desired_occupancy().value();
-      }
       Impl::configure_shmem_preference<
           DriverType, Kokkos::LaunchBounds<MaxThreadsPerBlock, MinBlocksPerSM>>(
           base_t::get_kernel_func(),
           maxshmem_per_sm, shmem_per_block,
           block_size, maxthreads_per_sm,
           max_blocks_regs, desired_occupancy);
+      }
 
       ensure_cuda_lock_arrays_on_device();
 
