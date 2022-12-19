@@ -179,7 +179,6 @@ int cuda_get_opt_block_size(const CudaInternal* cuda_instance,
                                 LaunchBounds{});
 }
 
-// Assuming cudaFuncSetCacheConfig(MyKernel, cudaFuncCachePreferL1)
 // NOTE these number can be obtained several ways:
 // * One option is to download the CUDA Occupancy Calculator spreadsheet, select
 // "Compute Capability" first and check what is the smallest "Shared Memory
