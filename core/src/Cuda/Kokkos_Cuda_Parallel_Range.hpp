@@ -305,11 +305,13 @@ class ParallelReduce<FunctorType, Kokkos::RangePolicy<Traits...>, ReducerType,
 
       KOKKOS_ASSERT(block_size > 0);
 
+      int block_count = std::min(int((nwork + block_size - 1) / block_size),
+                      4*m_policy.space().concurrency()/block_size);
       // TODO: down casting these uses more space than required?
       m_scratch_space = (word_size_type*)cuda_internal_scratch_space(
           m_policy.space(), Analysis::value_size(ReducerConditional::select(
                                 m_functor, m_reducer)) *
-                                block_size /* block_size == max block_count */);
+                                block_count /* block_size == max block_count */);
 
       // Intentionally do not downcast to word_size_type since we use Cuda
       // atomics in Kokkos_Cuda_ReduceScan.hpp
@@ -322,9 +324,7 @@ class ParallelReduce<FunctorType, Kokkos::RangePolicy<Traits...>, ReducerType,
 
       // REQUIRED ( 1 , N , 1 )
       dim3 block(1, block_size, 1);
-      // Required grid.x <= block.y
-      dim3 grid(std::min(int(block.y), int((nwork + block.y - 1) / block.y)), 1,
-                1);
+      dim3 grid(block_count, 1, 1);
 
       // TODO @graph We need to effectively insert this in to the graph
       const int shmem =
@@ -657,15 +657,10 @@ class ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::Cuda> {
   inline void execute() {
     const auto nwork = m_policy.end() - m_policy.begin();
     if (nwork) {
-      constexpr int GridMaxComputeCapability_2x = 0x0ffff;
-
       const int block_size = local_block_size(m_functor);
       KOKKOS_ASSERT(block_size > 0);
 
-      const int grid_max =
-          (block_size * block_size) < GridMaxComputeCapability_2x
-              ? (block_size * block_size)
-              : GridMaxComputeCapability_2x;
+      const int grid_max = (block_size * block_size);
 
       // At most 'max_grid' blocks:
       const int max_grid =
