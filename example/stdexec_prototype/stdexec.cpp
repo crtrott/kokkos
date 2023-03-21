@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     //nvexec::stream_context stream_ctx{};
     //stdexec::scheduler auto sch = stream_ctx.get_scheduler();
 
-    Kokkos::StdExec::inline_scheduler sch;
+    Kokkos::StdExec::inline_scheduler<Kokkos::DefaultExecutionSpace> sch;
     stdexec::sender auto snd = stdexec::schedule(sch) 
             //| stdexec::then(KOKKOS_LAMBDA() { printf("Then\n");})
             | stdexec::bulk(N, KOKKOS_LAMBDA(int i) { if(i<10) printf("Hello From Senders: %i %i\n",i,a(i)); })
