@@ -17,6 +17,27 @@
 #include <Kokkos_Core.hpp>
 #include <cstdio>
 
+#include <nvexec/stream_context.cuh>
+#include <stdexec/execution.hpp>
+#include <thrust/iterator/counting_iterator.h>
+#include <Kokkos_Graph.hpp>
+
+template <class Iterator>
+struct simple_range {
+  Iterator first;
+  Iterator last;
+};
+
+template <class Iterator>
+auto begin(simple_range<Iterator>& rng) {
+  return rng.first;
+}
+
+template <class Iterator>
+auto end(simple_range<Iterator>& rng) {
+  return rng.last;
+}
+
 int main(int argc, char* argv[]) {
   Kokkos::initialize(argc, argv);
   Kokkos::DefaultExecutionSpace{}.print_configuration(std::cout);
@@ -27,34 +48,25 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
-  const long n = strtol(argv[1], nullptr, 10);
+  const long N = strtol(argv[1], nullptr, 10);
 
-  printf("Number of even integers from 0 to %ld\n", n - 1);
+  {
+    Kokkos::View<int*> a("A", N);
+    Kokkos::deep_copy(a,3);
 
-  Kokkos::Timer timer;
-  timer.reset();
+    nvexec::stream_context stream_ctx{};
+    stdexec::scheduler auto sch = stream_ctx.get_scheduler();
 
-  // Compute the number of even integers from 0 to n-1, in parallel.
-  long count = 0;
-  Kokkos::parallel_reduce(
-      n, KOKKOS_LAMBDA(const long i, long& lcount) { lcount += (i % 2) == 0; },
-      count);
+    stdexec::sender auto snd = stdexec::schedule(sch) | stdexec::bulk(N, KOKKOS_LAMBDA(int i) { if(i<10) printf("Hello From Senders: %i %i\n",i,a(i)); });
+    stdexec::sync_wait(snd);
 
-  double count_time = timer.seconds();
-  printf("  Parallel: %ld    %10.6f\n", count, count_time);
+    stdexec::sender auto snd2 = stdexec::schedule(sch) | stdexec::then(KOKKOS_LAMBDA() { return a; }) | stdexec::then(KOKKOS_LAMBDA(Kokkos::View<int*> b) { return b; })
+                                | stdexec::bulk(N, KOKKOS_LAMBDA(int i, Kokkos::View<int*> b) {printf("Hello From Senders2: %i %i\n",i,b(i));}) | stdexec::split();
 
-  timer.reset();
-
-  // Compare to a sequential loop.
-  long seq_count = 0;
-  for (long i = 0; i < n; ++i) {
-    seq_count += (i % 2) == 0;
+    stdexec::sync_wait(snd2);
+    stdexec::sync_wait(snd2);
   }
-
-  count_time = timer.seconds();
-  printf("Sequential: %ld    %10.6f\n", seq_count, count_time);
-
   Kokkos::finalize();
 
-  return (count == seq_count) ? 0 : -1;
+  return 0;
 }
