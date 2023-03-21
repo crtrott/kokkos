@@ -21,6 +21,7 @@
 #include <stdexec/execution.hpp>
 #include <thrust/iterator/counting_iterator.h>
 #include <Kokkos_Graph.hpp>
+#include <scheduler.hpp>
 
 template <class Iterator>
 struct simple_range {
@@ -51,20 +52,23 @@ int main(int argc, char* argv[]) {
   const long N = strtol(argv[1], nullptr, 10);
 
   {
-    Kokkos::View<int*> a("A", N);
+    Kokkos::View<int*, Kokkos::SharedSpace> a("A", N);
     Kokkos::deep_copy(a,3);
 
-    nvexec::stream_context stream_ctx{};
-    stdexec::scheduler auto sch = stream_ctx.get_scheduler();
+    //nvexec::stream_context stream_ctx{};
+    //stdexec::scheduler auto sch = stream_ctx.get_scheduler();
 
+    Kokkos::StdExec::inline_scheduler sch;
     stdexec::sender auto snd = stdexec::schedule(sch) | stdexec::bulk(N, KOKKOS_LAMBDA(int i) { if(i<10) printf("Hello From Senders: %i %i\n",i,a(i)); });
-    stdexec::sync_wait(snd);
+    stdexec::sync_wait(std::move(snd));
 
-    stdexec::sender auto snd2 = stdexec::schedule(sch) | stdexec::then(KOKKOS_LAMBDA() { return a; }) | stdexec::then(KOKKOS_LAMBDA(Kokkos::View<int*> b) { return b; })
-                                | stdexec::bulk(N, KOKKOS_LAMBDA(int i, Kokkos::View<int*> b) {printf("Hello From Senders2: %i %i\n",i,b(i));}) | stdexec::split();
+#if 0
+    stdexec::sender auto snd2 = stdexec::schedule(sch) | stdexec::then(KOKKOS_LAMBDA() { return a; }) | stdexec::then(KOKKOS_LAMBDA(Kokkos::View<int*, Kokkos::SharedSpace> b) { return b; })
+                                | stdexec::bulk(N, KOKKOS_LAMBDA(int i, Kokkos::View<int*, Kokkos::SharedSpace> b) {printf("Hello From Senders2: %i %i\n",i,b(i));}) | stdexec::split();
 
     stdexec::sync_wait(snd2);
     stdexec::sync_wait(snd2);
+#endif
   }
   Kokkos::finalize();
 

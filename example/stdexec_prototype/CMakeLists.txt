@@ -12,6 +12,7 @@ find_package(STDEXEC REQUIRED)
 add_subdirectory(${Example_SOURCE_DIR}/../.. ${Example_BINARY_DIR}/kokkos)
 
 add_executable(kokkos-stdexec stdexec.cpp)
+target_include_directories(kokkos-stdexec PRIVATE ${Example_SOURCE_DIR})
 
 # This is the only line required to set up all compiler/linker flags
 target_link_libraries(kokkos-stdexec Kokkos::kokkos STDEXEC::stdexec)
