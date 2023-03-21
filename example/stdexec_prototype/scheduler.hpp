@@ -104,4 +104,25 @@ auto tag_invoke(stdexec::bulk_t, inline_scheduler, Sender&& snd, Shape shape,
                 Fun&& fun) {
   return bulk_sender{std::move(snd), shape, std::move(fun)};
 }
+
+struct sync_wait_receiver {
+  using is_receiver = void;
+
+  friend void tag_invoke(stdexec::set_value_t, sync_wait_receiver&& self) noexcept {
+    Kokkos::fence();
+  }
+  friend void tag_invoke(stdexec::set_error_t, sync_wait_receiver&& self,
+                         std::exception_ptr&& except) noexcept {
+    Kokkos::abort("Error for sync_wait");
+  }
+  explicit sync_wait_receiver() {}
+};
+
+template <class Sender>
+auto tag_invoke(stdexec::sync_wait_t, inline_scheduler, Sender&& snd) {
+  auto op = stdexec::connect(std::move(snd), sync_wait_receiver());
+  printf("Calling Start\n");
+  stdexec::start(op);
+}
+
 }  // namespace Kokkos::StdExec
