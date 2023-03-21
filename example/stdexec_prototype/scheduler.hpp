@@ -58,56 +58,56 @@ class inline_scheduler {
   bool operator==(const inline_scheduler&) const noexcept = default;
 };
 
-template <class _ReceiverId, std::integral _Shape, class _Fun, class Scheduler>
+template <class ReceiverId, std::integral Shape, class Fun, class Scheduler>
 struct bulk_receiver {
   using is_receiver = void;
 
-  [[no_unique_address]] _Shape __shape_;
-  [[no_unique_address]] _Fun __f_;
-  [[no_unique_address]] _ReceiverId successor;
+  [[no_unique_address]] Shape shape;
+  [[no_unique_address]] Fun fun;
+  [[no_unique_address]] ReceiverId successor;
   [[no_unique_address]] Scheduler sched;
 
   friend void tag_invoke(stdexec::set_value_t, bulk_receiver&& self) noexcept {
-    Kokkos::parallel_for(self.__shape_, self.__f_);
+    Kokkos::parallel_for(self.shape, self.fun);
     stdexec::set_value(std::move(self.successor));
   }
   friend void tag_invoke(stdexec::set_error_t, bulk_receiver&& self,
                          std::exception_ptr&& except) noexcept {
     stdexec::set_error(std::move(self.successor), std::move(except));
   }
-  explicit bulk_receiver(_ReceiverId __rcvr, _Shape __shape, _Fun __fun, Scheduler sched_)
-      : __shape_(__shape), __f_((_Fun &&) __fun), successor(__rcvr),sched(sched_) {}
+  explicit bulk_receiver(ReceiverId rcvr, Shape shape, Fun f, Scheduler sch)
+      : shape(shape), fun((Fun &&) f), successor(rcvr), sched(sch) {}
 };
 
-template <class _Sender, std::integral _Shape, class _Fun>
+template <class Sender, std::integral Shape, class Fun>
 struct bulk_sender {
-  template <stdexec::receiver _Receiver, class Scheduler>
-  using __receiver = bulk_receiver<_Receiver, _Shape, _Fun, Scheduler>;
+  template <stdexec::receiver Receiver, class Scheduler>
+  using receiver_type = bulk_receiver<Receiver, Shape, Fun, Scheduler>;
 
   using is_sender = void;
 
-  [[no_unique_address]] _Sender __sndr_;
-  [[no_unique_address]] _Shape __shape_;
-  [[no_unique_address]] _Fun __fun_;
+  [[no_unique_address]] Sender sndr;
+  [[no_unique_address]] Shape shape;
+  [[no_unique_address]] Fun fun;
 
   using completion_signatures =
       stdexec::completion_signatures<stdexec::set_value_t(),
                                      stdexec::set_error_t(std::exception_ptr)>;
 
-  template <stdexec::receiver _Receiver>
-  friend auto tag_invoke(stdexec::connect_t, bulk_sender&& __self,
-                         _Receiver __rcvr) noexcept {
-    auto sched = stdexec::get_completion_scheduler<stdexec::set_value_t>(stdexec::get_env(__self));
+  template <stdexec::receiver Receiver>
+  friend auto tag_invoke(stdexec::connect_t, bulk_sender&& self,
+                         Receiver rcvr) noexcept {
+    auto sched = stdexec::get_completion_scheduler<stdexec::set_value_t>(stdexec::get_env(self));
     return stdexec::connect(
-        std::move(__self.__sndr_),
-        __receiver<_Receiver, decltype(sched)>{std::move(__rcvr), __self.__shape_,
-                              std::move(__self.__fun_),
+        std::move(self.sndr),
+        receiver_type<Receiver, decltype(sched)>{std::move(rcvr), self.shape,
+                              std::move(self.fun),
                               std::move(sched)});
   }
 
   friend auto tag_invoke(stdexec::get_env_t,
-                         const bulk_sender& __self) noexcept {
-    return stdexec::get_env(__self.__sndr_);
+                         const bulk_sender& self) noexcept {
+    return stdexec::get_env(self.sndr);
   }
 };
 
