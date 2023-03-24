@@ -22,7 +22,7 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <Kokkos_Graph.hpp>
 #include <scheduler.hpp>
-#include <inline_scheduler.hpp>
+//#include <inline_scheduler.hpp>
 
 template <class Iterator>
 struct simple_range {
@@ -85,12 +85,8 @@ int main(int argc, char* argv[]) {
     //stdexec::scheduler auto sch = stream_ctx.get_scheduler();
 
     //Kokkos::StdExec::inline_scheduler<Kokkos::DefaultExecutionSpace> sch;
-#if 0
-    Kokkos::StdExec::kokkos_scheduler<Kokkos::DefaultExecutionSpace> sch;
-    stdexec::sender auto snd = hello_world(sch, N, a);
-    stdexec::sync_wait(std::move(snd));
 
-    
+#if 0
     auto snd2 = stdexec::schedule(sch) 
             | stdexec::bulk(N, KOKKOS_LAMBDA(int i) { 
                 if(i<10) {
@@ -102,7 +98,6 @@ int main(int argc, char* argv[]) {
               });
 
     stdexec::sync_wait(std::move(snd2));
-#endif
     Kokkos::parallel_for(Kokkos::TeamPolicy<>(2,4), KOKKOS_LAMBDA(const Kokkos::TeamPolicy<>::member_type& team) {
       printf("Hello from team: %i %i\n",team.league_rank(), threadidx());
       Kokkos::StdExec::kokkos_scheduler<Kokkos::TeamPolicy<>::member_type> sch(team);
@@ -112,6 +107,22 @@ int main(int argc, char* argv[]) {
       stdexec::start(op);
     });
     Kokkos::fence();
+#endif
+
+    Kokkos::StdExec::kokkos_scheduler<Kokkos::DefaultExecutionSpace> sch;
+    stdexec::sender auto snd = hello_world(sch, N, a);
+    stdexec::sync_wait(std::move(snd));
+
+    auto snd_start = stdexec::schedule(sch);
+    auto snd_bulk_nested = Kokkos::StdExec::impl_kokkos_scheduler::bulk_nested_sender{snd_start,3,
+      KOKKOS_LAMBDA(auto sch, int i) {
+        printf("Hello from Other team: %i %i\n",i, threadidx());
+        stdexec::sender auto snd = hello_world(sch, N, a);
+        auto op = stdexec::connect(std::move(snd), Kokkos::StdExec::impl_kokkos_scheduler::sync_wait_receiver(sch));
+        stdexec::start(op);
+      }
+    };
+    stdexec::sync_wait(std::move(snd_bulk_nested));
 #if 0
     stdexec::sender auto snd2 = stdexec::schedule(sch) | stdexec::then(KOKKOS_LAMBDA() { return a; }) | stdexec::then(KOKKOS_LAMBDA(Kokkos::View<int*, Kokkos::SharedSpace> b) { return b; })
                                 | stdexec::bulk(N, KOKKOS_LAMBDA(int i, Kokkos::View<int*, Kokkos::SharedSpace> b) {printf("Hello From Senders2: %i %i\n",i,b(i));}) | stdexec::split();

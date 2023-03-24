@@ -1,5 +1,9 @@
 #include <stdexec/execution.hpp>
+#include<inline_scheduler.hpp>
 
+namespace stdexec {
+  struct bulk_nested_t {};
+}
 namespace Kokkos::StdExec {
 
 namespace impl_kokkos_scheduler {
@@ -150,6 +154,80 @@ template <class ExecutionSpace, class Sender, std::integral Shape, class Fun>
 auto tag_invoke(stdexec::bulk_t, kokkos_scheduler<ExecutionSpace>, Sender&& snd, Shape shape,
                 Fun&& fun) {
   return bulk_sender{std::move(snd), shape, std::move(fun)};
+}
+
+template <class ReceiverId, std::integral Shape, class Fun, class Scheduler>
+struct bulk_nested_receiver {
+  using is_receiver = void;
+
+  [[no_unique_address]] Shape shape;
+  [[no_unique_address]] Fun fun;
+  [[no_unique_address]] ReceiverId successor;
+  [[no_unique_address]] Scheduler sched;
+
+  KOKKOS_FUNCTION
+  friend void tag_invoke(stdexec::set_value_t, bulk_nested_receiver&& self) noexcept 
+  {
+    KOKKOS_IF_ON_HOST(
+     Kokkos::parallel_for(Kokkos::TeamPolicy<Kokkos::Cuda>(self.shape,4), KOKKOS_LAMBDA(const Kokkos::TeamPolicy<Kokkos::Cuda>::member_type& team) {
+       Kokkos::StdExec::impl_kokkos_scheduler::kokkos_scheduler<Kokkos::TeamPolicy<>::member_type> sch(team);
+       self.fun(sch, team.league_rank());
+     });
+    )
+    KOKKOS_IF_ON_DEVICE(
+      if constexpr (!std::is_same_v<typename Scheduler::execution_space,Kokkos::Cuda>) {
+        Kokkos::StdExec::inline_scheduler<Kokkos::Cuda> sch();
+        Kokkos::parallel_for(self.sched.bulk_policy(self.shape), [=](int i) {
+          self.fun(sch,i);
+        });
+      }
+    )
+    stdexec::set_value(std::move(self.successor));
+  }
+  friend void tag_invoke(stdexec::set_error_t, bulk_nested_receiver&& self,
+                         std::exception_ptr&& except) noexcept {
+    stdexec::set_error(std::move(self.successor), std::move(except));
+  }
+  explicit bulk_nested_receiver(ReceiverId rcvr, Shape shape, Fun f, Scheduler sch)
+      : shape(shape), fun((Fun &&) f), successor(rcvr), sched(sch) {}
+};
+
+template <class Sender, std::integral Shape, class Fun>
+struct bulk_nested_sender {
+  template <stdexec::receiver Receiver, class Scheduler>
+  using receiver_type = bulk_nested_receiver<Receiver, Shape, Fun, Scheduler>;
+
+  using is_sender = void;
+
+  [[no_unique_address]] Sender sndr;
+  [[no_unique_address]] Shape shape;
+  [[no_unique_address]] Fun fun;
+
+  using completion_signatures =
+      stdexec::completion_signatures<stdexec::set_value_t(),
+                                     stdexec::set_error_t(std::exception_ptr)>;
+
+  template <stdexec::receiver Receiver>
+  friend auto tag_invoke(stdexec::connect_t, bulk_nested_sender&& self,
+                         Receiver rcvr) noexcept {
+    auto sched = stdexec::get_completion_scheduler<stdexec::set_value_t>(stdexec::get_env(self));
+    return stdexec::connect(
+        std::move(self.sndr),
+        receiver_type<Receiver, decltype(sched)>{std::move(rcvr), self.shape,
+                              std::move(self.fun),
+                              std::move(sched)});
+  }
+
+  friend auto tag_invoke(stdexec::get_env_t,
+                         const bulk_nested_sender& self) noexcept {
+    return stdexec::get_env(self.sndr);
+  }
+};
+
+template <class ExecutionSpace, class Sender, std::integral Shape, class Fun>
+auto tag_invoke(stdexec::bulk_nested_t, kokkos_scheduler<ExecutionSpace>, Sender&& snd, Shape shape,
+                Fun&& fun) {
+  return bulk_nested_sender{std::move(snd), shape, std::move(fun)};
 }
 
 template<class Scheduler>
