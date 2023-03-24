@@ -2,32 +2,33 @@
 
 namespace Kokkos::StdExec {
 
-template<class ExecutionSpace>
-class inline_scheduler {
+namespace impl_kokkos_scheduler {
+template<class ExecutionSpace, int level=1>
+class kokkos_scheduler {
 
   ExecutionSpace exec;
 
   template <class R>
   struct _op {
     [[no_unique_address]] R rec_;
-    friend void tag_invoke(stdexec::start_t, _op& op) noexcept try {
+    KOKKOS_FUNCTION
+    friend void tag_invoke(stdexec::start_t, _op& op) noexcept 
+    {
       stdexec::set_value((R &&) op.rec_);
-    } catch (...) {
-      stdexec::set_error((R &&) op.rec_, std::current_exception());
     }
   };
 
   struct _attrs {
-    inline_scheduler sch;
+    kokkos_scheduler sch;
     template <class Tag>
-    friend inline_scheduler tag_invoke(stdexec::get_completion_scheduler_t<Tag>,
+    friend kokkos_scheduler tag_invoke(stdexec::get_completion_scheduler_t<Tag>,
                                        _attrs attr) noexcept {
       return attr.sch;
     }
   };
 
   struct _sender {
-    inline_scheduler sch;
+    kokkos_scheduler sch;
 
     using completion_signatures = stdexec::completion_signatures<
         stdexec::set_value_t(), stdexec::set_error_t(std::exception_ptr)>;
@@ -45,17 +46,41 @@ class inline_scheduler {
   };
 
   friend _sender tag_invoke(stdexec::schedule_t,
-                            const inline_scheduler& sch) noexcept {
+                            const kokkos_scheduler& sch) noexcept {
     return {sch};
   }
 
  public:
-  inline_scheduler():exec(ExecutionSpace()) {}
-  inline_scheduler(ExecutionSpace exec_):exec(exec_) {}
+  using execution_space = ExecutionSpace;
+
+  kokkos_scheduler():exec(ExecutionSpace()) {}
+  kokkos_scheduler(ExecutionSpace exec_):exec(exec_) {}
 
   ExecutionSpace get_execution_space() const { return exec; }
 
-  bool operator==(const inline_scheduler&) const noexcept = default;
+  auto bulk_policy(int N)
+  requires(std::is_same_v<ExecutionSpace,Kokkos::Cuda>)
+  {
+    return Kokkos::RangePolicy<ExecutionSpace>(exec,0,N);
+  }
+  auto bulk_policy(int N)
+  requires(!std::is_same_v<ExecutionSpace,Kokkos::Cuda>)
+  {
+    return Kokkos::TeamVectorRange(exec,0,N);
+  }
+  auto fence(const char* str)
+  requires(std::is_same_v<ExecutionSpace,Kokkos::Cuda>)
+  {
+    return exec.fence(str);
+  }
+  auto fence(const char* str)
+  requires(!std::is_same_v<ExecutionSpace,Kokkos::Cuda>)
+  {
+    return exec.team_barrier();
+  }
+
+
+  bool operator==(const kokkos_scheduler&) const noexcept = default;
 };
 
 template <class ReceiverId, std::integral Shape, class Fun, class Scheduler>
@@ -67,8 +92,18 @@ struct bulk_receiver {
   [[no_unique_address]] ReceiverId successor;
   [[no_unique_address]] Scheduler sched;
 
-  friend void tag_invoke(stdexec::set_value_t, bulk_receiver&& self) noexcept {
-    Kokkos::parallel_for(self.shape, self.fun);
+  KOKKOS_FUNCTION
+  friend void tag_invoke(stdexec::set_value_t, bulk_receiver&& self) noexcept 
+  {
+    KOKKOS_IF_ON_HOST(
+    Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::Cuda>(0,self.shape), self.fun);
+    )
+    KOKKOS_IF_ON_DEVICE(
+                    printf("Exec\n");
+      if constexpr (!std::is_same_v<typename Scheduler::execution_space,Kokkos::Cuda>) {
+        Kokkos::parallel_for(self.sched.bulk_policy(self.shape), self.fun);
+      }
+    )
     stdexec::set_value(std::move(self.successor));
   }
   friend void tag_invoke(stdexec::set_error_t, bulk_receiver&& self,
@@ -112,7 +147,7 @@ struct bulk_sender {
 };
 
 template <class ExecutionSpace, class Sender, std::integral Shape, class Fun>
-auto tag_invoke(stdexec::bulk_t, inline_scheduler<ExecutionSpace>, Sender&& snd, Shape shape,
+auto tag_invoke(stdexec::bulk_t, kokkos_scheduler<ExecutionSpace>, Sender&& snd, Shape shape,
                 Fun&& fun) {
   return bulk_sender{std::move(snd), shape, std::move(fun)};
 }
@@ -124,7 +159,7 @@ struct sync_wait_receiver {
   Scheduler sched;
 
   friend void tag_invoke(stdexec::set_value_t, sync_wait_receiver&& self) noexcept {
-    self.sched.get_execution_space().fence("sync_wait::fence");
+    self.sched.fence("sync_wait::fence");
   }
   friend void tag_invoke(stdexec::set_error_t, sync_wait_receiver&& self,
                          std::exception_ptr&& except) noexcept {
@@ -134,9 +169,11 @@ struct sync_wait_receiver {
 };
 
 template <class ExecutionSpace, class Sender>
-auto tag_invoke(stdexec::sync_wait_t, inline_scheduler<ExecutionSpace> sched, Sender&& snd) {
+auto tag_invoke(stdexec::sync_wait_t, kokkos_scheduler<ExecutionSpace> sched, Sender&& snd) {
   auto op = stdexec::connect(std::move(snd), sync_wait_receiver(sched));
   stdexec::start(op);
 }
+} // namespace impl_kokkos_scheduler
 
+using impl_kokkos_scheduler::kokkos_scheduler;
 }  // namespace Kokkos::StdExec
