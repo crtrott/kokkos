@@ -38,7 +38,7 @@
 ///@}
 
 /// Some tests are skipped for unified memory space.
-#if defined(KOKKOS_ENABLE_IMPL_CUDA_UNIFIED_MEMORY)
+#if defined(KOKKOS_ENABLE_IMPL_CUDA_UNIFIED_MEMORY) || defined(KOKKOS_ENABLE_IMPL_HIP_UNIFIED_MEMORY)
 #define GTEST_SKIP_IF_UNIFIED_MEMORY_SPACE \
   GTEST_SKIP() << "skipping since unified memory requires additional fences";
 #else
