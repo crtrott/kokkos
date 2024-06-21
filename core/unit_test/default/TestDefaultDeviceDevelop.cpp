@@ -22,6 +22,20 @@
 
 namespace Test {
 
-TEST(defaultdevicetype, development_test) {}
+TEST(defaultdevicetype, development_test) {
+
+  Kokkos::View<float*> a("A", 100);
+
+  static_assert(std::is_same_v<typename Kokkos::Impl::SpaceAwareAccessor<Kokkos::HostSpace, Kokkos::default_accessor<float>>::reference, float&>);
+  static_assert(std::is_same_v<decltype(Kokkos::Impl::SpaceAwareAccessor<Kokkos::HostSpace, Kokkos::default_accessor<float>>().access(a.data(),0)), float&>);
+  static_assert(std::is_same_v<decltype((typename Kokkos::View<float*>::mdspan_type{a.data(), 100})(0)), float&>);
+  static_assert(std::is_same_v<decltype(a(0)), float&>);
+
+  for(int i=0; i<100; i++) {
+    a(i) = i;
+    ASSERT_EQ(a(i), float(i));
+    ASSERT_EQ(&a(i), a.data() + i);
+  }
+}
 
 }  // namespace Test

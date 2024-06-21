@@ -124,6 +124,7 @@ KOKKOS_INLINE_FUNCTION auto mapping_from_view_mapping(const VM &view_mapping) {
   // std::span is not available in C++17 (our current requirements),
   // so we need to use the std::array constructor for layout mappings.
   // FIXME When C++20 is available, we can use std::span here instead
+  if constexpr (VM::Rank > 0) {
   std::size_t strides[VM::Rank];
   view_mapping.stride_fill(&strides[0]);
   if constexpr (std::is_same_v<typename mapping_type::layout_type,
@@ -145,6 +146,9 @@ KOKKOS_INLINE_FUNCTION auto mapping_from_view_mapping(const VM &view_mapping) {
                         strides[VM::Rank - 2]);
   } else {
     return mapping_type(extents_from_view_mapping<extents_type>(view_mapping));
+  }
+  } else {
+    return mapping_type();
   }
 #ifdef KOKKOS_COMPILER_INTEL
   __builtin_unreachable();

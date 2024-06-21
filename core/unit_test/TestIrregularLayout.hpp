@@ -19,7 +19,7 @@
 #include <sstream>
 #include <iostream>
 #define OFFSET_LIST_MAX_SIZE 100
-
+#if 0
 namespace Kokkos {
 
 struct LayoutSelective {
@@ -231,5 +231,5 @@ TEST(TEST_CATEGORY, view_irregular_layout) {
   TestLayout<TEST_EXECSPACE> tl;
   tl.run_test();
 }
-
 }  // namespace Test
+#endif

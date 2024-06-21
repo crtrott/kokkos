@@ -396,7 +396,9 @@ struct MDSpanViewTraits<Traits,
       typename Impl::LayoutFromArrayLayout<typename Traits::array_layout>::type;
   using accessor_type = Impl::SpaceAwareAccessor<
       typename Traits::memory_space,
-      Kokkos::default_accessor<typename Traits::value_type>>;
+      std::conditional_t<Traits::memory_traits::is_atomic,
+          Kokkos::Impl::AtomicAccessorRelaxed<typename Traits::value_type>,
+          Kokkos::default_accessor<typename Traits::value_type>>>;
   using mdspan_type = mdspan<typename Traits::value_type, extents_type,
                              mdspan_layout_type, accessor_type>;
 };
@@ -646,6 +648,7 @@ class View : public ViewTraits<DataType, Properties...> {
 
  public:
   using traits = ViewTraits<DataType, Properties...>;
+  using mdspan_type = typename Impl::MDSpanViewTraits<traits>::mdspan_type;
 
  private:
   using map_type =
@@ -656,6 +659,7 @@ class View : public ViewTraits<DataType, Properties...> {
 
   view_tracker_type m_track;
   map_type m_map;
+  mdspan_type m_mdspan;
 
  public:
   //----------------------------------------
@@ -890,6 +894,18 @@ class View : public ViewTraits<DataType, Properties...> {
   }
 
  public:
+  template <typename I0>
+  KOKKOS_FORCEINLINE_FUNCTION
+      std::enable_if_t<Kokkos::Impl::always_true<I0>::value && rank()==1, typename mdspan_type::reference>
+   operator[](I0 i0) const {
+    return m_mdspan(i0);
+  }
+  template<class ... IndexTypes>
+  KOKKOS_FORCEINLINE_FUNCTION
+  typename mdspan_type::reference operator()(IndexTypes ... idx) const {
+    return m_mdspan(idx...);
+  }
+#if 0
   //------------------------------
   // Rank 1 default map operator()
 
@@ -1003,6 +1019,7 @@ class View : public ViewTraits<DataType, Properties...> {
     KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_track, m_map, indices...)
     return m_map.reference(indices...);
   }
+#endif
 
   //------------------------------
   // Rank 0
@@ -1269,8 +1286,8 @@ class View : public ViewTraits<DataType, Properties...> {
                                      i7, extra...)
     return m_map.reference(i0, i1, i2, i3, i4, i5, i6, i7);
   }
-
 #undef KOKKOS_IMPL_VIEW_OPERATOR_VERIFY
+
 
   //----------------------------------------
   // Standard destructor, constructors, and assignment operators
@@ -1282,13 +1299,13 @@ class View : public ViewTraits<DataType, Properties...> {
   View() = default;
 
   KOKKOS_FUNCTION
-  View(const View& other) : m_track(other.m_track), m_map(other.m_map) {
+  View(const View& other) : m_track(other.m_track), m_map(other.m_map), m_mdspan(other.m_mdspan) {
     KOKKOS_IF_ON_HOST((hooks_policy::copy_construct(*this, other);))
   }
 
   KOKKOS_FUNCTION
   View(View&& other)
-      : m_track{std::move(other.m_track)}, m_map{std::move(other.m_map)} {
+      : m_track{std::move(other.m_track)}, m_map{std::move(other.m_map)}, m_mdspan{std::move(other.m_mdspan)} {
     KOKKOS_IF_ON_HOST((hooks_policy::move_construct(*this, other);))
   }
 
@@ -1296,6 +1313,7 @@ class View : public ViewTraits<DataType, Properties...> {
   View& operator=(const View& other) {
     m_map   = other.m_map;
     m_track = other.m_track;
+    m_mdspan = other.m_mdspan;
 
     KOKKOS_IF_ON_HOST((hooks_policy::copy_assign(*this, other);))
 
@@ -1306,6 +1324,7 @@ class View : public ViewTraits<DataType, Properties...> {
   View& operator=(View&& other) {
     m_map   = std::move(other.m_map);
     m_track = std::move(other.m_track);
+    m_mdspan = std::move(other.m_mdspan);
 
     KOKKOS_IF_ON_HOST((hooks_policy::move_assign(*this, other);))
 
@@ -1322,7 +1341,7 @@ class View : public ViewTraits<DataType, Properties...> {
       std::enable_if_t<Kokkos::Impl::ViewMapping<
           traits, typename View<RT, RP...>::traits,
           typename traits::specialize>::is_assignable_data_type>* = nullptr)
-      : m_track(rhs), m_map() {
+      : m_track(rhs), m_map(), m_mdspan(static_cast<mdspan_type>(rhs.m_mdspan)) {
     using SrcTraits = typename View<RT, RP...>::traits;
     using Mapping   = Kokkos::Impl::ViewMapping<traits, SrcTraits,
                                               typename traits::specialize>;
@@ -1344,6 +1363,7 @@ class View : public ViewTraits<DataType, Properties...> {
     static_assert(Mapping::is_assignable, "Incompatible View copy assignment");
     Mapping::assign(m_map, rhs.m_map, rhs.m_track.m_tracker);
     m_track.assign(rhs);
+    m_mdspan = rhs.m_mdspan;
     return *this;
   }
 
@@ -1368,6 +1388,7 @@ class View : public ViewTraits<DataType, Properties...> {
         "Subview construction requires compatible view and subview arguments");
 
     Mapping::assign(m_map, src_view.m_map, arg0, args...);
+    m_mdspan = (*this).to_mdspan(); // FIXME_MDSPAN
   }
 
   //----------------------------------------
@@ -1441,12 +1462,18 @@ class View : public ViewTraits<DataType, Properties...> {
 
     // Setup and initialization complete, start tracking
     m_track.m_tracker.assign_allocated_record_to_uninitialized(record);
+    // FIXME_MDSPAN
+    m_mdspan = (*this).to_mdspan(); // FIXME_MDSPAN
+    //if constexpr (rank() == 1) {
+    //  m_mdspan = mdspan_type(data(), arg_layout.dimension[0]);
+    //} 
   }
 
   KOKKOS_INLINE_FUNCTION
   void assign_data(pointer_type arg_data) {
     m_track.m_tracker.clear();
     m_map.assign_data(arg_data);
+    m_mdspan = mdspan_type(arg_data,m_mdspan.mapping(),m_mdspan.accessor());
   }
 
   // Wrap memory according to properties and array layout
@@ -1485,6 +1512,11 @@ class View : public ViewTraits<DataType, Properties...> {
           i2, i3, i4, i5, i6, i7, "UNMANAGED");
     }
 #endif
+    // FIXME_MDSPAN
+    m_mdspan = (*this).to_mdspan(); // FIXME_MDSPAN
+    //if constexpr (rank() == 1) {
+    //  m_mdspan = mdspan_type(data(), arg_layout.dimension[0]);
+    //} 
   }
 
   // Simple dimension-only layout
@@ -1570,6 +1602,10 @@ class View : public ViewTraits<DataType, Properties...> {
     static_assert(Mapping::is_assignable,
                   "Incompatible View copy construction");
     Mapping::assign(m_map, map, track.m_tracker);
+    // FIXME_MDSPAN
+    //if constexpr (rank() == 1) {
+    //  m_mdspan = mdspan_type(data(), extent(0));
+    //} 
   }
 
   // Construct View from internal shared allocation tracker object and map
@@ -1585,6 +1621,11 @@ class View : public ViewTraits<DataType, Properties...> {
     static_assert(Mapping::is_assignable,
                   "Incompatible View copy construction");
     Mapping::assign(m_map, map, track);
+    // FIXME_MDSPAN
+    m_mdspan = (*this).to_mdspan(); // FIXME_MDSPAN
+    //if constexpr (rank() == 1) {
+    //  m_mdspan = mdspan_type(data(), extent(0));
+    //} 
   }
 
   //----------------------------------------
