@@ -726,6 +726,7 @@ class View : public ViewTraits<DataType, Properties...> {
   KOKKOS_INLINE_FUNCTION constexpr std::enable_if_t<
       std::is_integral<iType>::value, size_t>
   extent(const iType& r) const noexcept {
+    if(r >= rank()) return 1;
     if(m_map.extent(r) != m_mdspan.extent(r)) {
       printf("%i %i %i\n",(int) r, (int) m_map.extent(r), (int) m_mdspan.extent(r));
       Kokkos::abort("Ups extent");
@@ -1046,6 +1047,8 @@ class View : public ViewTraits<DataType, Properties...> {
     static_assert(Mapping::is_assignable,
                   "Incompatible View copy construction");
     Mapping::assign(m_map, rhs.m_map, rhs.m_track.m_tracker);
+    if constexpr (m_mdspan.rank() > 0)
+    if(m_mdspan.extent(0) != extent(0)) Kokkos::abort("Ups cpyctor");
   }
 
   template <class RT, class... RP>
@@ -1062,6 +1065,8 @@ class View : public ViewTraits<DataType, Properties...> {
     Mapping::assign(m_map, rhs.m_map, rhs.m_track.m_tracker);
     m_track.assign(rhs);
     m_mdspan = rhs.m_mdspan;
+    if constexpr (m_mdspan.rank() > 0)
+    if(m_mdspan.extent(0) != extent(0)) Kokkos::abort("Ups assign");
     return *this;
   }
 
@@ -1647,6 +1652,7 @@ KOKKOS_INLINE_FUNCTION bool operator==(const View<LT, LP...>& lhs,
          lhs.extent(2) == rhs.extent(2) && lhs.extent(3) == rhs.extent(3) &&
          lhs.extent(4) == rhs.extent(4) && lhs.extent(5) == rhs.extent(5) &&
          lhs.extent(6) == rhs.extent(6) && lhs.extent(7) == rhs.extent(7);
+         // FIXME_MDSPAN
 }
 
 template <class LT, class... LP, class RT, class... RP>
