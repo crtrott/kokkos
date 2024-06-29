@@ -57,6 +57,14 @@ constexpr AUTO_t AUTO = Kokkos::AUTO_t();
 
 struct InvalidType {};
 
+struct ALL_t {
+  KOKKOS_INLINE_FUNCTION
+  constexpr const ALL_t& operator()() const { return *this; }
+
+  KOKKOS_INLINE_FUNCTION
+  constexpr bool operator==(const ALL_t&) const { return true; }
+};
+
 }  // namespace Kokkos
 
 //----------------------------------------------------------------------------
@@ -392,6 +400,10 @@ struct StdIsPartitioned;
 template <class Index, class Space = HostSpace>
 struct StdPartitionPoint;
 }  // namespace Kokkos
+
+namespace Kokkos {
+  struct ALL_t;
+}
 
 #ifdef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_CORE_FWD
 #undef KOKKOS_IMPL_PUBLIC_INCLUDE

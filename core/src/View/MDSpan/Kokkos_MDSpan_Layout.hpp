@@ -24,6 +24,7 @@ static_assert(false,
 
 #include "Kokkos_MDSpan_Extents.hpp"
 #include <impl/Kokkos_ViewDataAnalysis.hpp>
+#include "Kokkos_Pair.hpp"
 
 namespace Kokkos::Impl {
 
@@ -153,6 +154,23 @@ KOKKOS_INLINE_FUNCTION auto mapping_from_view_mapping(const VM &view_mapping) {
 #ifdef KOKKOS_COMPILER_INTEL
   __builtin_unreachable();
 #endif
+}
+
+KOKKOS_INLINE_FUNCTION
+auto convert_subview_arg_to_submdspan_arg(Kokkos::ALL_t) {
+  return Kokkos::full_extent;
+}
+
+template<class iType>
+KOKKOS_INLINE_FUNCTION
+auto convert_subview_arg_to_submdspan_arg(Kokkos::pair<iType,iType> arg) {
+  return std::pair<iType, iType>{arg.first, arg.second};
+}
+
+template<class Arg>
+KOKKOS_INLINE_FUNCTION
+auto convert_subview_arg_to_submdspan_arg(Arg arg) {
+  return arg;
 }
 
 }  // namespace Kokkos::Impl

@@ -736,8 +736,9 @@ class View : public ViewTraits<DataType, Properties...> {
 
   static KOKKOS_INLINE_FUNCTION constexpr size_t static_extent(
       const unsigned r) noexcept {
+    if(r >= mdspan_type::rank()) return 1;
     size_t val = mdspan_type::static_extent(r);
-    return val == dynamic_extent?1:val; //FIXME_MDSPAN
+    return val == dynamic_extent?0:val; //FIXME_MDSPAN
   }
 
   template <typename iType>
@@ -1047,7 +1048,7 @@ class View : public ViewTraits<DataType, Properties...> {
     static_assert(Mapping::is_assignable,
                   "Incompatible View copy construction");
     Mapping::assign(m_map, rhs.m_map, rhs.m_track.m_tracker);
-    if constexpr (m_mdspan.rank() > 0)
+    if constexpr (mdspan_type::rank() > 0)
     if(m_mdspan.extent(0) != extent(0)) Kokkos::abort("Ups cpyctor");
   }
 
@@ -1065,7 +1066,7 @@ class View : public ViewTraits<DataType, Properties...> {
     Mapping::assign(m_map, rhs.m_map, rhs.m_track.m_tracker);
     m_track.assign(rhs);
     m_mdspan = rhs.m_mdspan;
-    if constexpr (m_mdspan.rank() > 0)
+    if constexpr (mdspan_type::rank() > 0)
     if(m_mdspan.extent(0) != extent(0)) Kokkos::abort("Ups assign");
     return *this;
   }
@@ -1091,7 +1092,8 @@ class View : public ViewTraits<DataType, Properties...> {
         "Subview construction requires compatible view and subview arguments");
 
     Mapping::assign(m_map, src_view.m_map, arg0, args...);
-    m_mdspan = (*this).to_mdspan(); // FIXME_MDSPAN
+    m_mdspan = Kokkos::submdspan(src_view.to_mdspan(), Impl::convert_subview_arg_to_submdspan_arg(arg0), Impl::convert_subview_arg_to_submdspan_arg(args)...);
+//(*this).to_mdspan(); // FIXME_MDSPAN
   }
 
   //----------------------------------------
@@ -1490,7 +1492,7 @@ class View : public ViewTraits<DataType, Properties...> {
                        OtherAccessor>,
                 typename Impl::MDSpanViewTraits<traits>::mdspan_type>>>
   KOKKOS_INLINE_FUNCTION constexpr operator mdspan<
-      OtherElementType, OtherExtents, OtherLayoutPolicy, OtherAccessor>() {
+      OtherElementType, OtherExtents, OtherLayoutPolicy, OtherAccessor>() const {
     using mdspan_type = typename Impl::MDSpanViewTraits<traits>::mdspan_type;
     return mdspan_type{m_map.data(),
                        Impl::mapping_from_view_mapping<mdspan_type>(m_map)};
@@ -1504,7 +1506,7 @@ class View : public ViewTraits<DataType, Properties...> {
                 typename OtherAccessorType::data_handle_type>>>
   KOKKOS_INLINE_FUNCTION constexpr auto to_mdspan(
       const OtherAccessorType& other_accessor =
-          typename Impl::MDSpanViewTraits<traits>::accessor_type()) {
+          typename Impl::MDSpanViewTraits<traits>::accessor_type()) const {
     using mdspan_type = typename Impl::MDSpanViewTraits<traits>::mdspan_type;
     using ret_mdspan_type =
         mdspan<typename mdspan_type::element_type,

@@ -41,13 +41,6 @@
 
 namespace Kokkos {
 
-struct ALL_t {
-  KOKKOS_INLINE_FUNCTION
-  constexpr const ALL_t& operator()() const { return *this; }
-
-  KOKKOS_INLINE_FUNCTION
-  constexpr bool operator==(const ALL_t&) const { return true; }
-};
 
 #ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
 namespace Impl {

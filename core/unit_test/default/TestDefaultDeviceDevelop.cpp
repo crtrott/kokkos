@@ -24,17 +24,18 @@ namespace Test {
 
 TEST(defaultdevicetype, development_test) {
 
-  Kokkos::View<float*> a("A", 100);
+  Kokkos::View<float*, Kokkos::LayoutLeft> a("A", 100);
+  Kokkos::View<float[100], Kokkos::LayoutLeft> b;
 
-  static_assert(std::is_same_v<typename Kokkos::Impl::SpaceAwareAccessor<Kokkos::HostSpace, Kokkos::default_accessor<float>>::reference, float&>);
-  static_assert(std::is_same_v<decltype(Kokkos::Impl::SpaceAwareAccessor<Kokkos::HostSpace, Kokkos::default_accessor<float>>().access(a.data(),0)), float&>);
-  static_assert(std::is_same_v<decltype((typename Kokkos::View<float*>::mdspan_type{a.data(), 100})(0)), float&>);
-  static_assert(std::is_same_v<decltype(a(0)), float&>);
-
-  for(int i=0; i<100; i++) {
-    a(i) = i;
-    ASSERT_EQ(a(i), float(i));
-    ASSERT_EQ(&a(i), a.data() + i);
+  printf("Assignable: %i static: %i dyn: %i\n", Kokkos::is_assignable(b,a)?1:0, (int)b.static_extent(0), (int)a.extent(0));
+  using DstTraits = typename decltype(b)::traits;
+  using SrcTraits = typename decltype(a)::traits;
+  using mapping_type =
+      Kokkos::Impl::ViewMapping<DstTraits, SrcTraits,
+                                typename DstTraits::specialize>;
+  printf("Map: %i %i\n",mapping_type::is_assignable, (int) DstTraits::dimension::rank_dynamic);
+  for(int r=0; r<8; r++) {
+    printf("%i %i\n",(int)b.static_extent(r),(int)a.extent(r));
   }
 }
 
