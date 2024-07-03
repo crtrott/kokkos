@@ -28,8 +28,6 @@ static_assert(false,
 #include <desul/atomics.hpp>
 #include <impl/Kokkos_SharedAlloc.hpp>
 
-#include <iostream>
-
 namespace Kokkos {
 
 // For now use the accessors in Impl namespace, as an
