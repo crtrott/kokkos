@@ -101,72 +101,16 @@ constexpr bool is_assignable(const Kokkos::View<ViewTDst...>& dst,
 }
 
 namespace Impl {
-template <class Enabled, class... Properties>
-struct ViewTraitsImpl;
+template<class ... Properties>
+struct BasicViewFromTraits {
+  using view_traits = ViewTraits<Properties...>;
+  using mdspan_view_traits = MDSpanViewTraits<view_traits>;
+  using element_type = typename view_traits::value_type;
+  using extents_type = typename mdspan_view_traits::extents_type;
+  using layout_type = typename mdspan_view_traits::mdspan_layout_type;
+  using accessor_type = typename mdspan_view_traits::accessor_type;
 
-template <>
-struct ViewTraitsImpl<void> {
-  using execution_space = void;
-  using memory_space    = void;
-  using HostMirrorSpace = void;
-  using array_layout    = void;
-  using memory_traits   = void;
-  using specialize      = void;
-  using hooks_policy    = void;
-};
-
-template <class HooksPolicy, class... Prop>
-struct ViewTraitsImpl<
-    std::enable_if_t<Kokkos::Experimental::is_hooks_policy<HooksPolicy>::value>,
-    HooksPolicy, Prop...> {
-  using execution_space = typename ViewTraits<void, Prop...>::execution_space;
-  using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
-  using HostMirrorSpace = typename ViewTraits<void, Prop...>::HostMirrorSpace;
-  using array_layout    = typename ViewTraits<void, Prop...>::array_layout;
-  using memory_traits   = typename ViewTraits<void, Prop...>::memory_traits;
-  using specialize      = typename ViewTraits<void, Prop...>::specialize;
-  using hooks_policy    = HooksPolicy;
-};
-
-template <class ArrayLayout, class... Prop>
-struct ViewTraitsImpl<
-    std::enable_if_t<Kokkos::is_array_layout<ArrayLayout>::value>, ArrayLayout,
-    Prop...> {
-  // Specify layout, keep subsequent space and memory traits arguments
-
-  using execution_space = typename ViewTraits<void, Prop...>::execution_space;
-  using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
-  using HostMirrorSpace = typename ViewTraits<void, Prop...>::HostMirrorSpace;
-  using array_layout    = ArrayLayout;
-  using memory_traits   = typename ViewTraits<void, Prop...>::memory_traits;
-  using specialize      = typename ViewTraits<void, Prop...>::specialize;
-  using hooks_policy    = typename ViewTraits<void, Prop...>::hooks_policy;
-};
-
-template <class Space, class... Prop>
-struct ViewTraitsImpl<std::enable_if_t<Kokkos::is_space<Space>::value>, Space,
-                      Prop...> {
-  // Specify Space, memory traits should be the only subsequent argument.
-
-  static_assert(
-      std::is_same<typename ViewTraits<void, Prop...>::execution_space,
-                   void>::value &&
-          std::is_same<typename ViewTraits<void, Prop...>::memory_space,
-                       void>::value &&
-          std::is_same<typename ViewTraits<void, Prop...>::HostMirrorSpace,
-                       void>::value &&
-          std::is_same<typename ViewTraits<void, Prop...>::array_layout,
-                       void>::value,
-      "Only one View Execution or Memory Space template argument");
-
-  using execution_space = typename Space::execution_space;
-  using memory_space    = typename Space::memory_space;
-  using HostMirrorSpace =
-      typename Kokkos::Impl::HostMirror<Space>::Space::memory_space;
-  using array_layout  = typename execution_space::array_layout;
-  using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
-  using specialize    = typename ViewTraits<void, Prop...>::specialize;
-  using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  using type = BasicView<element_type,extents_type,layout_type,accessor_type>;
 };
 }  // namespace Impl
 
@@ -193,23 +137,27 @@ template <class T>
 inline constexpr bool is_view_v = is_view<T>::value;
 
 template <class DataType, class... Properties>
-class View : public BasicView<DataType, Properties...> {
+class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
  private:
   template <class, class...>
   friend class View;
-  template <class, class...>
-  friend class BasicView;
   template <typename V>
   friend struct Kokkos::Impl::ViewTracker;
 
-  using base_t = BasicView<DataType, Properties...>;
+  using base_t = typename Impl::BasicViewFromTraits<DataType, Properties...>::type;
 
  public:
+  // typedefs originally from ViewTraits
+  using data_type         = DataType;
   using traits            = ViewTraits<DataType, Properties...>;
+  using view_tracker_type = Impl::ViewTracker<View>;
+  using array_layout      = typename traits::array_layout;
+  using device_type       = typename traits::device_type;
+ 
+  // typedefs from BasicView
   using mdspan_type       = typename base_t::mdspan_type;
-  using view_tracker_type = typename base_t::view_tracker_type;
-  using pointer_type      = typename base_t::pointer_type;
-  using reference_type    = typename base_t::reference_type;
+  using pointer_type      = typename base_t::data_handle_type;
+  using reference_type    = typename base_t::reference;
 
   //----------------------------------------
   /** \brief  Compatible view of array of scalar types */
@@ -529,6 +477,10 @@ class View : public BasicView<DataType, Properties...> {
       : base_t(src_view, arg0, args...) {}
 
  public:
+
+  template<class ... Args>
+  KOKKOS_INLINE_FUNCTION View(Args ... args): base_t(args...) {}
+#if 0
   //----------------------------------------
   // Allocation according to allocation properties and array layout
 
@@ -634,6 +586,7 @@ class View : public BasicView<DataType, Properties...> {
       const typename view_tracker_type::track_type& track,
       const Kokkos::Impl::ViewMapping<Traits, typename Traits::specialize>& map)
       : base_t(track, map) {}
+#endif
 
   //----------------------------------------
   // Memory span required to wrap these dimensions.

@@ -52,13 +52,13 @@ struct ViewUniformType {
   using const_data_type = std::add_const_t<typename ViewType::data_type>;
   using runtime_data_type =
       typename ViewScalarToDataType<typename ViewType::value_type,
-                                    ViewType::rank>::type;
+                                    ViewType::rank()>::type;
   using runtime_const_data_type = typename ViewScalarToDataType<
-      std::add_const_t<typename ViewType::value_type>, ViewType::rank>::type;
+      std::add_const_t<typename ViewType::value_type>, ViewType::rank()>::type;
 
   using array_layout =
       typename ViewUniformLayout<typename ViewType::array_layout,
-                                 ViewType::rank>::array_layout;
+                                 ViewType::rank()>::array_layout;
 
   using device_type = typename ViewType::device_type;
   using anonymous_device_type =

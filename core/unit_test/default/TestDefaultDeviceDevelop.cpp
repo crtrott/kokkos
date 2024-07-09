@@ -22,6 +22,11 @@
 
 namespace Test {
 
-TEST(defaultdevicetype, development_test) {}
-
+TEST(defaultdevicetype, development_test) {
+  using acc_t = Kokkos::Impl::SpaceAwareAccessor<
+                  typename Kokkos::DefaultExecutionSpace::memory_space,
+                  Kokkos::default_accessor<int>>;
+  Kokkos::BasicView<int, Kokkos::dextents<int, 1>, Kokkos::layout_right, acc_t> a("A", 5);
+  Kokkos::View<int*> b("B", 5);
+}
 }  // namespace Test
