@@ -42,6 +42,7 @@ static_assert(false,
 #include <View/MDSpan/Kokkos_MDSpan_Accessor.hpp>
 #endif
 #include <View/Kokkos_ViewTraits.hpp>
+#include <View/Kokkos_ViewUtility.hpp>
 #include <Kokkos_MinMax.hpp>
 
 //----------------------------------------------------------------------------
@@ -210,49 +211,6 @@ constexpr bool is_assignable(const Kokkos::View<ViewTDst...>& dst,
 //----------------------------------------------------------------------------
 
 #include <impl/Kokkos_ViewMapping.hpp>
-
-//----------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-
-namespace Kokkos {
-/** \brief  Create View allocation parameter bundle from argument list.
- *
- *  Valid argument list members are:
- *    1) label as a "string" or std::string
- *    2) memory space instance of the View::memory_space type
- *    3) execution space instance compatible with the View::memory_space
- *    4) Kokkos::WithoutInitializing to bypass initialization
- *    4) Kokkos::AllowPadding to allow allocation to pad dimensions for memory
- * alignment
- */
-template <class... Args>
-inline Impl::ViewCtorProp<typename Impl::ViewCtorProp<void, Args>::type...>
-view_alloc(Args const&... args) {
-  using return_type =
-      Impl::ViewCtorProp<typename Impl::ViewCtorProp<void, Args>::type...>;
-
-  static_assert(!return_type::has_pointer,
-                "Cannot give pointer-to-memory for view allocation");
-
-  return return_type(args...);
-}
-
-template <class... Args>
-KOKKOS_INLINE_FUNCTION
-    Impl::ViewCtorProp<typename Impl::ViewCtorProp<void, Args>::type...>
-    view_wrap(Args const&... args) {
-  using return_type =
-      Impl::ViewCtorProp<typename Impl::ViewCtorProp<void, Args>::type...>;
-
-  static_assert(!return_type::has_memory_space &&
-                    !return_type::has_execution_space &&
-                    !return_type::has_label && return_type::has_pointer,
-                "Must only give pointer-to-memory for view wrapping");
-
-  return return_type(args...);
-}
-
-} /* namespace Kokkos */
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------

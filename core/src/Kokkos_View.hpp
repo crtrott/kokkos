@@ -36,6 +36,7 @@ template <class, class...>
 class ViewMapping;
 }
 #include <impl/Kokkos_ViewMapping.hpp>
+#include <View/Kokkos_ViewUtility.hpp>
 #include <Kokkos_MinMax.hpp>
 
 // Class to provide a uniform type

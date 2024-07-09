@@ -23,6 +23,7 @@ static_assert(false,
 #define KOKKOS_MDSPAN_ACCESSOR_HPP
 
 #include <Kokkos_Macros.hpp>
+#include "Kokkos_MDSpan_Header.hpp"
 #include <Kokkos_Concepts.hpp>
 #include <Kokkos_Core_fwd.hpp>
 #include <desul/atomics.hpp>
