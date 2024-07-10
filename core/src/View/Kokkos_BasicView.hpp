@@ -28,6 +28,7 @@ static_assert(false,
 #include "Kokkos_ViewAlloc.hpp"
 #include "MDSpan/Kokkos_MDSpan_Accessor.hpp"
 #include "MDSpan/Kokkos_MDSpan_Header.hpp"
+#include <impl/Kokkos_ViewCtor.hpp>
 
 namespace Kokkos {
 namespace Impl {}  // namespace Impl
@@ -82,6 +83,70 @@ class BasicView
       OtherIndexTypes... indices)
       : BasicView(label, extents_type{indices...}) {}
   ///@}
+
+  template <class... P>
+  explicit inline BasicView(
+      const Impl::ViewCtorProp<P...>& arg_prop,
+      std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer,
+                       typename mdspan_type::mapping_type> const& arg_mapping) {
+    // Copy the input allocation properties with possibly defaulted properties
+    // We need to split it in two to avoid MSVC compiler errors
+    auto prop_copy_tmp =
+        Impl::with_properties_if_unset(arg_prop, std::string{});
+    auto prop_copy = Impl::with_properties_if_unset(
+        prop_copy_tmp, memory_space{},
+        execution_space{});
+    using alloc_prop = decltype(prop_copy);
+
+    if (alloc_prop::initialize &&
+        !alloc_prop::execution_space::impl_is_initialized()) {
+      // If initializing view data then
+      // the execution space must be initialized.
+      Kokkos::Impl::throw_runtime_exception(
+          "Constructing View and initializing data with uninitialized "
+          "execution space");
+    }
+    mdspan_type(
+            data_handle_type(Impl::make_shared_allocation_record<ElementType>(
+                arg_mapping, 
+                Impl::get_property<Impl::LabelTag>(prop_copy),
+                Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
+                &Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy),
+                std::integral_constant<bool,alloc_prop::allow_padding>(), std::integral_constant<bool, alloc_prop::initialize>())),
+            arg_mapping);
+  }
+  
+  template <class... P>
+  explicit inline BasicView(
+      const Impl::ViewCtorProp<P...>& arg_prop,
+      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer,
+                       typename mdspan_type::mapping_type> const& arg_mapping) {
+    // Copy the input allocation properties with possibly defaulted properties
+    // We need to split it in two to avoid MSVC compiler errors
+    auto prop_copy_tmp =
+        Impl::with_properties_if_unset(arg_prop, std::string{});
+    auto prop_copy = Impl::with_properties_if_unset(
+        prop_copy_tmp, memory_space{},
+        execution_space{});
+    using alloc_prop = decltype(prop_copy);
+
+    if (alloc_prop::initialize &&
+        !alloc_prop::execution_space::impl_is_initialized()) {
+      // If initializing view data then
+      // the execution space must be initialized.
+      Kokkos::Impl::throw_runtime_exception(
+          "Constructing View and initializing data with uninitialized "
+          "execution space");
+    }
+    mdspan_type(
+            data_handle_type(Impl::make_shared_allocation_record<ElementType>(
+                arg_mapping, 
+                Impl::get_property<Impl::LabelTag>(prop_copy),
+                Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
+                &Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy),
+                std::integral_constant<bool,alloc_prop::allow_padding>(), std::integral_constant<bool, alloc_prop::initialize>())),
+            arg_mapping);
+  }
 
  private:
   template <typename E, bool AllowPadding, bool Initialize>

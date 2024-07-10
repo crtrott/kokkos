@@ -22,6 +22,7 @@ static_assert(false,
 #ifndef KOKKOS_EXPERIMENTAL_MDSPAN_LAYOUT_HPP
 #define KOKKOS_EXPERIMENTAL_MDSPAN_LAYOUT_HPP
 
+#include <utility>
 #include "Kokkos_MDSpan_Extents.hpp"
 #include <impl/Kokkos_ViewDataAnalysis.hpp>
 
@@ -114,6 +115,23 @@ KOKKOS_INLINE_FUNCTION auto array_layout_from_mapping(
 #ifdef KOKKOS_COMPILER_INTEL
   __builtin_unreachable();
 #endif
+}
+
+template <class ArrayLayout, class MappingType, size_t ... Idx>
+KOKKOS_INLINE_FUNCTION auto mapping_from_array_layout_impl(ArrayLayout layout, std::index_sequence<Idx...>) {
+  using index_type = typename MappingType::index_type;
+  return MappingType{dextents<index_type, MappingType::extents_type::rank()>{layout.dimension[Idx]...}};
+}
+template <class MappingType, size_t ... Idx>
+KOKKOS_INLINE_FUNCTION auto mapping_from_array_layout_impl(LayoutStride layout, std::index_sequence<Idx...>) {
+  using index_type = typename MappingType::index_type;
+  index_type strides[MappingType::extents_type::rank()] = { layout.stride[Idx]... };
+  return MappingType{dextents<index_type, MappingType::extents_type::rank()>{layout.dimension[Idx]...}, strides };
+}
+
+template <class ArrayLayout, class MappingType>
+KOKKOS_INLINE_FUNCTION auto mapping_from_array_layout(ArrayLayout layout) {
+  return mapping_from_array_layout_impl<ArrayLayout, MappingType>(layout, std::make_index_sequence<MappingType::extents_type::rank()>());
 }
 
 template <class MDSpanType, class VM>

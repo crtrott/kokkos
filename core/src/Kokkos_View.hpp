@@ -261,7 +261,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
     return data() != nullptr;
   }
   KOKKOS_INLINE_FUNCTION constexpr pointer_type data() const {
-    return base_t::m_map.data();
+    return base_t::data_handle();
   }
 
   //----------------------------------------
@@ -480,7 +480,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
 
   template<class ... Args>
   KOKKOS_INLINE_FUNCTION View(Args ... args): base_t(args...) {}
-#if 0
+
   //----------------------------------------
   // Allocation according to allocation properties and array layout
 
@@ -489,8 +489,9 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
       const Impl::ViewCtorProp<P...>& arg_prop,
       std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer,
                        typename traits::array_layout> const& arg_layout)
-      : base_t(arg_prop, arg_layout) {}
+      : base_t(arg_prop, Impl::mapping_from_array_layout<typename traits::array_layout, typename mdspan_type::mapping_type>(arg_layout)) {}
 
+#if 0
   // Wrap memory according to properties and array layout
   template <class... P>
   explicit KOKKOS_INLINE_FUNCTION View(
@@ -606,6 +607,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
         arg_N0, arg_N1, arg_N2, arg_N3, arg_N4, arg_N5, arg_N6, arg_N7));
   }
 
+#if 0
   explicit KOKKOS_INLINE_FUNCTION View(
       pointer_type arg_ptr, const size_t arg_N0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N1 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
@@ -626,6 +628,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   explicit KOKKOS_INLINE_FUNCTION View(
       pointer_type arg_ptr, const typename traits::array_layout& arg_layout)
       : View(Impl::ViewCtorProp<pointer_type>(arg_ptr), arg_layout) {}
+#endif
 
   //----------------------------------------
   // Shared scratch memory constructor

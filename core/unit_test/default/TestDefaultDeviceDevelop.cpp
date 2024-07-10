@@ -28,5 +28,7 @@ TEST(defaultdevicetype, development_test) {
                   Kokkos::default_accessor<int>>;
   Kokkos::BasicView<int, Kokkos::dextents<int, 1>, Kokkos::layout_right, acc_t> a("A", 5);
   Kokkos::View<int*> b("B", 5);
+  auto prop = Kokkos::view_alloc("C");
+  Kokkos::View<float*, Kokkos::LayoutRight> c(prop, Kokkos::LayoutRight(5));
 }
 }  // namespace Test
