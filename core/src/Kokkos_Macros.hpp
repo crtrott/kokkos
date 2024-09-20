@@ -588,6 +588,7 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #define KOKKOS_IMPL_STRINGIFY(x) #x
 #define KOKKOS_IMPL_TOSTRING(x) KOKKOS_IMPL_STRINGIFY(x)
 
+// Comment
 #ifdef _MSC_VER
 #define KOKKOS_IMPL_DO_PRAGMA(x) __pragma(x)
 #define KOKKOS_IMPL_WARNING(desc) \
