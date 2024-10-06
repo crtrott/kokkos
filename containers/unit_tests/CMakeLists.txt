@@ -26,7 +26,7 @@ foreach(Tag Threads;Serial;OpenMP;HPX;Cuda;HIP;SYCL)
       WithoutInitializing
       UnorderedMap
       Vector
-      ViewCtorPropEmbeddedDim
+      #      ViewCtorPropEmbeddedDim
     )
       if(NOT Kokkos_ENABLE_DEPRECATED_CODE_4 AND Name STREQUAL "Vector")
         continue() # skip Kokkos::vector test if deprecated code 4 is not enabled

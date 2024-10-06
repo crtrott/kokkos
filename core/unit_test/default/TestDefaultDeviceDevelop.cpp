@@ -20,8 +20,7 @@
 
 #include <TestDefaultDeviceType_Category.hpp>
 
+#include <TestViewIsAssignable.hpp>
 namespace Test {
-
 TEST(defaultdevicetype, development_test) {}
-
 }  // namespace Test

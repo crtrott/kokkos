@@ -198,6 +198,7 @@ class TestAtomicViewAPI {
 
     dView4_unmanaged unmanaged_dx = dx;
     ASSERT_EQ(dx.use_count(), 2);
+    ASSERT_EQ(unmanaged_dx.use_count(), 0);
 
     az = ax;
     ASSERT_EQ(dx.use_count(), 3);

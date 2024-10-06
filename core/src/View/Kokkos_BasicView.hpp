@@ -34,6 +34,78 @@ static_assert(false,
 #include <optional>
 #include <type_traits>
 
+#if defined(KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK)
+
+#define KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(...)                                  \
+  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        m_ptr.tracker());                                                      \
+  } else {                                                                     \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        Kokkos::Impl::SharedAllocationTracker());                              \
+  }
+
+#else
+
+#define KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(...)                                  \
+  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        m_ptr.tracker());                                                      \
+  } else {                                                                     \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        Kokkos::Impl::SharedAllocationTracker());                              \
+  }
+#endif
+namespace Kokkos::Impl {
+// primary template: memory space is accessible, do nothing.
+template <class MemorySpace, class AccessSpace,
+          bool = SpaceAccessibility<AccessSpace, MemorySpace>::accessible>
+struct RuntimeCheckBasicViewMemoryAccessViolation {
+  KOKKOS_FUNCTION RuntimeCheckBasicViewMemoryAccessViolation(
+      Kokkos::Impl::SharedAllocationTracker const &) {}
+};
+
+// explicit specialization: memory access violation will occur, call abort with
+// the specified error message.
+template <class MemorySpace, class AccessSpace>
+struct RuntimeCheckBasicViewMemoryAccessViolation<MemorySpace, AccessSpace,
+                                                  false> {
+  KOKKOS_FUNCTION RuntimeCheckBasicViewMemoryAccessViolation(
+      Kokkos::Impl::SharedAllocationTracker const &tracker) {
+    char err[256] =
+        "Kokkos::View ERROR: attempt to access inaccessible memory space "
+        "(label=\"";
+
+    KOKKOS_IF_ON_HOST(({
+      if (tracker.has_record()) {
+        strncat(err, tracker.template get_label<void>().c_str(), 128);
+      } else {
+        strcat(err, "**UNMANAGED**");
+      }
+    }))
+
+    KOKKOS_IF_ON_DEVICE(({
+      strcat(err, "**UNAVAILABLE**");
+      (void)tracker;
+    }))
+
+    strcat(err, "\")");
+
+    Kokkos::abort(err);
+  }
+};
+
+template <class MemorySpace>
+KOKKOS_FUNCTION void runtime_check_memory_access_violation(
+    SharedAllocationTracker const &track) {
+  KOKKOS_IF_ON_HOST(((void)RuntimeCheckBasicViewMemoryAccessViolation<
+                         MemorySpace, DefaultHostExecutionSpace>(track);))
+  KOKKOS_IF_ON_DEVICE(((void)RuntimeCheckBasicViewMemoryAccessViolation<
+                           MemorySpace, DefaultExecutionSpace>(track);))
+}
+
+}  // namespace Kokkos::Impl
+
 #define KOKKOS_IMPL_NO_UNIQUE_ADDRESS _MDSPAN_NO_UNIQUE_ADDRESS
 namespace Kokkos {
 
@@ -68,22 +140,6 @@ transform_kokkos_slice_to_mdspan_slice(const T &s) {
   return KokkosSliceToMDSpanSliceImpl<T>::transform(s);
 }
 
-// We do have implementation detail versions of these in our mdspan impl
-// However they are not part of the public standard interface
-template <class T>
-struct is_layout_right_padded : public std::false_type {};
-
-template <size_t Pad>
-struct is_layout_right_padded<Kokkos::Experimental::layout_right_padded<Pad>>
-    : public std::true_type {};
-
-template <class T>
-struct is_layout_left_padded : public std::false_type {};
-
-template <size_t Pad>
-struct is_layout_left_padded<Kokkos::Experimental::layout_left_padded<Pad>>
-    : public std::true_type {};
-
 }  // namespace Impl
 
 template <class ElementType, class Extents, class LayoutPolicy,
@@ -98,7 +154,7 @@ class BasicView {
   using mapping_type     = typename mdspan_type::mapping_type;
   using element_type     = typename mdspan_type::element_type;
   using value_type       = typename mdspan_type::value_type;
-  using index_type       = typename mdspan_type::index_type;
+  using index_type       = typename mdspan_type::size_type;
   using size_type        = typename mdspan_type::size_type;
   using rank_type        = typename mdspan_type::rank_type;
   using data_handle_type = typename mdspan_type::data_handle_type;
@@ -350,16 +406,26 @@ class BasicView {
           "Constructing View and initializing data with uninitialized "
           "execution space");
     }
+    if constexpr (has_exec) {
+    using prop_exec_space_t = std::remove_cv_t<std::remove_reference_t<decltype(Impl::get_property<
+                       Impl::ExecutionSpaceTag>(prop_copy))>>;
     return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
         arg_mapping.required_span_size(),
         Impl::get_property<Impl::LabelTag>(prop_copy),
         Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
-        has_exec ? std::optional<execution_space>{Impl::get_property<
-                       Impl::ExecutionSpaceTag>(prop_copy)}
-                 : std::optional<execution_space>{std::nullopt},
+        std::optional<prop_exec_space_t>{Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy)},
         std::integral_constant<bool, alloc_prop::initialize>(),
         std::integral_constant<bool, alloc_prop::sequential_host_init>()));
-  }
+    } else {
+    return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
+        arg_mapping.required_span_size(),
+        Impl::get_property<Impl::LabelTag>(prop_copy),
+        Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
+        std::optional<execution_space>{std::nullopt},
+        std::integral_constant<bool, alloc_prop::initialize>(),
+        std::integral_constant<bool, alloc_prop::sequential_host_init>()));
+    }
+ }
 
  public:
   template <class... P>
@@ -493,6 +559,7 @@ class BasicView {
              (sizeof...(OtherIndexTypes) == rank()))
   KOKKOS_FUNCTION constexpr reference operator()(
       OtherIndexTypes... indices) const {
+    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
@@ -503,6 +570,7 @@ class BasicView {
         std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
   KOKKOS_FUNCTION constexpr reference operator()(
       const Array<OtherIndexType, rank()> &indices) const {
+    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices);
     return m_acc.access(m_ptr,
                         [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
                           return m_map(indices[Idxs]...);
@@ -515,6 +583,7 @@ class BasicView {
         std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
   KOKKOS_FUNCTION constexpr reference operator()(
       std::span<OtherIndexType, rank()> indices) const {
+    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices);
     return m_acc.access(m_ptr,
                         [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
                           return m_map(indices[Idxs]...);
@@ -533,6 +602,7 @@ class BasicView {
     static_assert(
         (std::is_nothrow_constructible_v<index_type, OtherIndexTypes> && ...));
     static_assert((sizeof...(OtherIndexTypes)) == rank());
+    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
@@ -545,6 +615,7 @@ class BasicView {
           ((sizeof...(OtherIndexTypes)) == rank()),
       reference>
   operator()(OtherIndexTypes... indices) const {
+    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
@@ -568,7 +639,7 @@ class BasicView {
 
  public:
   KOKKOS_FUNCTION constexpr size_type size() const noexcept {
-    return size_impl(std::make_index_sequence<rank()>());
+    return size_impl(std::make_integer_sequence<size_t, rank()>());
   }
 
  private:
