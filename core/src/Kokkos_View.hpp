@@ -495,9 +495,10 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   // may assign unmanaged from managed.
 
   template <class OtherT, class... OtherArgs>
-    requires(std::is_constructible_v<
-             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>)
-  KOKKOS_INLINE_FUNCTION View(const View<OtherT, OtherArgs...>& other)
+//    requires(std::is_constructible_v<
+//             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>)
+  KOKKOS_INLINE_FUNCTION View(const View<OtherT, OtherArgs...>& other, std::enable_if_t<std::is_constructible_v<
+             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>, void*> = nullptr)
       : base_t(static_cast<typename mdspan_type::data_handle_type>(
                    other.data_handle()),
                static_cast<typename mdspan_type::mapping_type>(other.mapping()),
@@ -539,13 +540,34 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
 
   template <class... P>
   KOKKOS_FUNCTION explicit inline View(
-      const base_t::data_handle_type& handle,
+      const typename base_t::data_handle_type& handle,
       typename traits::array_layout const& arg_layout)
       : base_t(
             handle,
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
                 arg_layout)) {}
 
+#ifdef KOKKOS_ENABLE_CXX17
+  template<class Layout>
+  KOKKOS_FUNCTION
+  explicit inline View(const typename base_t::data_handle_type& handle,
+                       const Layout& arg_layout, std::enable_if_t<
+    (std::is_same_v<Layout, LayoutStride> &&
+     std::is_same_v<typename base_t::layout_type, layout_stride>) ||
+    (std::is_same_v<Layout, LayoutLeft> &&
+     std::is_same_v<typename base_t::layout_type, layout_left>) ||
+    (std::is_same_v<Layout, LayoutLeft> &&
+     std::is_same_v<typename base_t::layout_type, Experimental::layout_left_padded<>>) ||
+    (std::is_same_v<Layout, LayoutRight> &&
+     std::is_same_v<typename base_t::layout_type, layout_right>) ||
+    (std::is_same_v<Layout, LayoutRight> &&
+     std::is_same_v<typename base_t::layout_type, Experimental::layout_right_padded<>>)
+		       , void*> = nullptr)
+      : base_t(
+            handle,
+            Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
+                arg_layout)) {}
+#else
   // Constructors from legacy layouts when using Views of the new layouts
   // LayoutLeft -> layout_left, layout_left_padded
   // LayoutRight -> layout_right, layout_right_padded
@@ -596,7 +618,9 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
             handle,
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
                 arg_layout)) {}
+#endif
 
+#ifndef KOKKOS_ENABLE_CXX17
   template <class P, class... Args>
     requires(std::is_convertible_v<P, pointer_type>)
   KOKKOS_FUNCTION View(P ptr_, Args... args)
@@ -613,9 +637,74 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   // Special function to be preferred over the above for passing in 0, NULL or
   // nullptr when pointer type is char*
   template <class... Args>
-  // requires(std::is_same_v<pointer_type, char*>)
+//    requires(std::is_same_v<pointer_type, char*>)
   explicit View(decltype(nullptr), Args... args)
       : View(Kokkos::view_wrap(pointer_type(nullptr)), args...) {}
+#else
+#if 1
+    template <class P, class... Args, std::enable_if_t<std::is_convertible_v<P, pointer_type>, size_t> = 0ul>
+  KOKKOS_FUNCTION View(P ptr_, Args... args)
+      : View(Kokkos::view_wrap(static_cast<pointer_type>(ptr_)), args...) {}
+
+  // Special function to be preferred over the above for string literals
+  // when pointer type is char*
+  template <class L, class... Args, std::enable_if_t<(std::is_same_v<pointer_type, char*> &&
+             std::is_same_v<const char*, L>), size_t> = 0ul>
+  explicit View(L label, Args... args)
+      : View(Kokkos::view_alloc(std::string(label)), args...) {}
+
+  // Special function to be preferred over the above for passing in 0, NULL or
+  // nullptr when pointer type is char*
+  template <class... Args>
+//    requires(std::is_same_v<pointer_type, char*>)
+  explicit View(decltype(nullptr), Args... args)
+      : View(Kokkos::view_wrap(pointer_type(nullptr)), args...) {}
+#else
+ private:
+  KOKKOS_FUNCTION
+  static constexpr std::true_type matches_nullptr(decltype(nullptr)) {
+    return std::true_type{};
+  }
+  template<class T>
+  KOKKOS_FUNCTION
+  static constexpr std::enable_if_t<std::is_integral_v<T>,std::true_type> matches_nullptr(T) {
+    return std::true_type{};
+  }
+  template<class T>
+  KOKKOS_FUNCTION
+  static constexpr std::enable_if_t<!std::is_integral_v<T>,std::false_type> matches_nullptr(T) {
+    return std::false_type{};
+  }
+
+ public:
+  template<class Arg1, class ... Args, std::enable_if_t<
+    std::is_same_v<pointer_type, char*> ||
+    std::is_convertible_v<Arg1, pointer_type>
+	  , size_t> = 0ul>
+  KOKKOS_FUNCTION View(Arg1 arg1, Args... args) {
+    if constexpr (std::is_same_v<pointer_type, char*>) {
+        if constexpr(std::is_same_v<const char*, Arg1>) {
+          // Label
+	  KOKKOS_IF_ON_HOST(View(Kokkos::view_alloc(std::string(arg1)), args...);)
+	  KOKKOS_IF_ON_DEVICE(Kokkos::abort("Calling allocating View constructor on device");)
+          return;
+        } else if constexpr(decltype(matches_nullptr(arg1))::value) {
+	  // Nullptr
+	  View(Kokkos::view_wrap(pointer_type(nullptr)), args...);
+          if constexpr (std::is_integral_v<Arg1>) {
+            if(arg1 != Arg1(0)) Kokkos::abort("Passing non-zero integer as first View ctor argument");
+	  }
+	  return;
+        }
+    }
+    if constexpr(std::is_convertible_v<Arg1, pointer_type>) {
+      View(Kokkos::view_wrap(pointer_type(nullptr)), args...);
+      return;
+    }
+    Kokkos::abort("Unexpected View Ctor callpath");
+  }
+#endif
+#endif
 
   // Constructor which allows always 8 sizes should be deprecated
   template <class... P>
@@ -660,37 +749,6 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
                   "overload taking a layout object instead.");
   }
 
-  // Wrap memory according to properties and array layout
-#if 0
-  template <class... P>
-  explicit KOKKOS_INLINE_FUNCTION View(
-      const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer,
-                       typename traits::array_layout> const& arg_layout)
-      : base_t(arg_prop, arg_layout) {}
-#endif
-
-#if 0
-  template <class... P>
-  explicit KOKKOS_INLINE_FUNCTION View(
-      const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer, size_t> const
-          arg_N0          = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N1 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N2 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N3 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N4 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N5 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N6 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N7 = KOKKOS_IMPL_CTOR_DEFAULT_ARG)
-      : View(arg_prop,
-             typename traits::array_layout(arg_N0, arg_N1, arg_N2, arg_N3,
-                                           arg_N4, arg_N5, arg_N6, arg_N7)) {
-    static_assert(traits::array_layout::is_extent_constructible,
-                  "Layout is not constructible from extent arguments. Use "
-                  "overload taking a layout object instead.");
-  }
-#endif
   // Allocate with label and layout
   template <typename Label>
   explicit inline View(
@@ -716,25 +774,6 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
                   "Layout is not constructible from extent arguments. Use "
                   "overload taking a layout object instead.");
   }
-#if 0
-  // Construct view from ViewTracker and map
-  // This should be the preferred method because future extensions may need to
-  // use the ViewTracker class.
-  template <class Traits>
-  KOKKOS_INLINE_FUNCTION View(
-      const view_tracker_type& track,
-      const Kokkos::Impl::ViewMapping<Traits, typename Traits::specialize>& map)
-      : base_t(track, map) {}
-
-  // Construct View from internal shared allocation tracker object and map
-  // This is here for backwards compatibility for classes that derive from
-  // Kokkos::View
-  template <class Traits>
-  KOKKOS_INLINE_FUNCTION View(
-      const typename view_tracker_type::track_type& track,
-      const Kokkos::Impl::ViewMapping<Traits, typename Traits::specialize>& map)
-      : base_t(track, map) {}
-#endif
 
   //----------------------------------------
   // Memory span required to wrap these dimensions.
@@ -758,29 +797,6 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
     return required_allocation_size(typename traits::array_layout(
         arg_N0, arg_N1, arg_N2, arg_N3, arg_N4, arg_N5, arg_N6, arg_N7));
   }
-
-#if 0
-  explicit KOKKOS_INLINE_FUNCTION View(
-      pointer_type arg_ptr, const size_t arg_N0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N1 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N2 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N3 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N4 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N5 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N6 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
-      const size_t arg_N7 = KOKKOS_IMPL_CTOR_DEFAULT_ARG)
-      : View(Impl::ViewCtorProp<pointer_type>(arg_ptr),
-             typename traits::array_layout(arg_N0, arg_N1, arg_N2, arg_N3,
-                                           arg_N4, arg_N5, arg_N6, arg_N7)) {
-    static_assert(traits::array_layout::is_extent_constructible,
-                  "Layout is not constructible from extent arguments. Use "
-                  "overload taking a layout object instead.");
-  }
-
-  explicit KOKKOS_INLINE_FUNCTION View(
-      pointer_type arg_ptr, const typename traits::array_layout& arg_layout)
-      : View(Impl::ViewCtorProp<pointer_type>(arg_ptr), arg_layout) {}
-#endif
 
   //----------------------------------------
   // Shared scratch memory constructor
