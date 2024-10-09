@@ -407,25 +407,26 @@ class BasicView {
           "execution space");
     }
     if constexpr (has_exec) {
-    using prop_exec_space_t = std::remove_cv_t<std::remove_reference_t<decltype(Impl::get_property<
-                       Impl::ExecutionSpaceTag>(prop_copy))>>;
-    return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
-        arg_mapping.required_span_size(),
-        Impl::get_property<Impl::LabelTag>(prop_copy),
-        Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
-        std::optional<prop_exec_space_t>{Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy)},
-        std::integral_constant<bool, alloc_prop::initialize>(),
-        std::integral_constant<bool, alloc_prop::sequential_host_init>()));
+      using prop_exec_space_t = std::remove_cv_t<std::remove_reference_t<
+          decltype(Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy))>>;
+      return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
+          arg_mapping.required_span_size(),
+          Impl::get_property<Impl::LabelTag>(prop_copy),
+          Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
+          std::optional<prop_exec_space_t>{
+              Impl::get_property<Impl::ExecutionSpaceTag>(prop_copy)},
+          std::integral_constant<bool, alloc_prop::initialize>(),
+          std::integral_constant<bool, alloc_prop::sequential_host_init>()));
     } else {
-    return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
-        arg_mapping.required_span_size(),
-        Impl::get_property<Impl::LabelTag>(prop_copy),
-        Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
-        std::optional<execution_space>{std::nullopt},
-        std::integral_constant<bool, alloc_prop::initialize>(),
-        std::integral_constant<bool, alloc_prop::sequential_host_init>()));
+      return data_handle_type(Impl::make_shared_allocation_record<ElementType>(
+          arg_mapping.required_span_size(),
+          Impl::get_property<Impl::LabelTag>(prop_copy),
+          Impl::get_property<Impl::MemorySpaceTag>(prop_copy),
+          std::optional<execution_space>{std::nullopt},
+          std::integral_constant<bool, alloc_prop::initialize>(),
+          std::integral_constant<bool, alloc_prop::sequential_host_init>()));
     }
- }
+  }
 
  public:
   template <class... P>

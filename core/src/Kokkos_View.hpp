@@ -172,7 +172,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   using index_type           = typename traits::memory_space::size_type;
 
   // FIXME: Should be unsigned
-  using size_type            = typename memory_space::size_type;
+  using size_type = typename memory_space::size_type;
 
   using scalar_array_type       = typename traits::scalar_array_type;
   using const_scalar_array_type = typename traits::const_scalar_array_type;
@@ -333,7 +333,8 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   template <typename... Is>
   static KOKKOS_FUNCTION void check_access_member_function_valid_args(Is...) {
     // cast to int to work around pointless comparison of unsigned to 0 warning
-    static_assert(static_cast<int>(sizeof...(Is)) <= static_cast<int>(8 - rank));
+    static_assert(static_cast<int>(sizeof...(Is)) <=
+                  static_cast<int>(8 - rank));
     static_assert(Kokkos::Impl::are_integral<Is...>::value);
   }
 #endif
@@ -495,10 +496,14 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   // may assign unmanaged from managed.
 
   template <class OtherT, class... OtherArgs>
-//    requires(std::is_constructible_v<
-//             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>)
-  KOKKOS_INLINE_FUNCTION View(const View<OtherT, OtherArgs...>& other, std::enable_if_t<std::is_constructible_v<
-             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>, void*> = nullptr)
+  //    requires(std::is_constructible_v<
+  //             mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>)
+  KOKKOS_INLINE_FUNCTION View(
+      const View<OtherT, OtherArgs...>& other,
+      std::enable_if_t<
+          std::is_constructible_v<
+              mdspan_type, typename View<OtherT, OtherArgs...>::mdspan_type>,
+          void*> = nullptr)
       : base_t(static_cast<typename mdspan_type::data_handle_type>(
                    other.data_handle()),
                static_cast<typename mdspan_type::mapping_type>(other.mapping()),
@@ -521,18 +526,21 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   // Allocation according to allocation properties and array layout
 
   template <class... P>
-  explicit inline View(
-      const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer, const typename traits::array_layout&> arg_layout)
+  explicit inline View(const Impl::ViewCtorProp<P...>& arg_prop,
+                       std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer,
+                                        const typename traits::array_layout&>
+                           arg_layout)
       : base_t(
             arg_prop,
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
                 arg_layout)) {}
-  
+
   template <class... P>
   KOKKOS_FUNCTION explicit inline View(
       const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer, const typename traits::array_layout&> arg_layout)
+      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer,
+                       const typename traits::array_layout&>
+          arg_layout)
       : base_t(
             arg_prop,
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
@@ -548,21 +556,23 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
                 arg_layout)) {}
 
 #ifdef KOKKOS_ENABLE_CXX17
-  template<class Layout>
-  KOKKOS_FUNCTION
-  explicit inline View(const typename base_t::data_handle_type& handle,
-                       const Layout& arg_layout, std::enable_if_t<
-    (std::is_same_v<Layout, LayoutStride> &&
-     std::is_same_v<typename base_t::layout_type, layout_stride>) ||
-    (std::is_same_v<Layout, LayoutLeft> &&
-     std::is_same_v<typename base_t::layout_type, layout_left>) ||
-    (std::is_same_v<Layout, LayoutLeft> &&
-     std::is_same_v<typename base_t::layout_type, Experimental::layout_left_padded<>>) ||
-    (std::is_same_v<Layout, LayoutRight> &&
-     std::is_same_v<typename base_t::layout_type, layout_right>) ||
-    (std::is_same_v<Layout, LayoutRight> &&
-     std::is_same_v<typename base_t::layout_type, Experimental::layout_right_padded<>>)
-		       , void*> = nullptr)
+  template <class Layout>
+  KOKKOS_FUNCTION explicit inline View(
+      const typename base_t::data_handle_type& handle, const Layout& arg_layout,
+      std::enable_if_t<
+          (std::is_same_v<Layout, LayoutStride> &&
+           std::is_same_v<typename base_t::layout_type, layout_stride>) ||
+              (std::is_same_v<Layout, LayoutLeft> &&
+               std::is_same_v<typename base_t::layout_type, layout_left>) ||
+              (std::is_same_v<Layout, LayoutLeft> &&
+               std::is_same_v<typename base_t::layout_type,
+                              Experimental::layout_left_padded<> >) ||
+              (std::is_same_v<Layout, LayoutRight> &&
+               std::is_same_v<typename base_t::layout_type, layout_right>) ||
+              (std::is_same_v<Layout, LayoutRight> &&
+               std::is_same_v<typename base_t::layout_type,
+                              Experimental::layout_right_padded<> >),
+          void*> = nullptr)
       : base_t(
             handle,
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
@@ -637,80 +647,37 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   // Special function to be preferred over the above for passing in 0, NULL or
   // nullptr when pointer type is char*
   template <class... Args>
-//    requires(std::is_same_v<pointer_type, char*>)
   explicit View(decltype(nullptr), Args... args)
       : View(Kokkos::view_wrap(pointer_type(nullptr)), args...) {}
 #else
-#if 1
-    template <class P, class... Args, std::enable_if_t<std::is_convertible_v<P, pointer_type>, size_t> = 0ul>
+  template <
+      class P, class... Args,
+      std::enable_if_t<std::is_convertible_v<P, pointer_type>, size_t> = 0ul>
   KOKKOS_FUNCTION View(P ptr_, Args... args)
       : View(Kokkos::view_wrap(static_cast<pointer_type>(ptr_)), args...) {}
 
   // Special function to be preferred over the above for string literals
   // when pointer type is char*
-  template <class L, class... Args, std::enable_if_t<(std::is_same_v<pointer_type, char*> &&
-             std::is_same_v<const char*, L>), size_t> = 0ul>
+  template <class L, class... Args,
+            std::enable_if_t<(std::is_same_v<pointer_type, char*> &&
+                              std::is_same_v<const char*, L>),
+                             size_t> = 0ul>
   explicit View(L label, Args... args)
       : View(Kokkos::view_alloc(std::string(label)), args...) {}
 
   // Special function to be preferred over the above for passing in 0, NULL or
   // nullptr when pointer type is char*
   template <class... Args>
-//    requires(std::is_same_v<pointer_type, char*>)
   explicit View(decltype(nullptr), Args... args)
       : View(Kokkos::view_wrap(pointer_type(nullptr)), args...) {}
-#else
- private:
-  KOKKOS_FUNCTION
-  static constexpr std::true_type matches_nullptr(decltype(nullptr)) {
-    return std::true_type{};
-  }
-  template<class T>
-  KOKKOS_FUNCTION
-  static constexpr std::enable_if_t<std::is_integral_v<T>,std::true_type> matches_nullptr(T) {
-    return std::true_type{};
-  }
-  template<class T>
-  KOKKOS_FUNCTION
-  static constexpr std::enable_if_t<!std::is_integral_v<T>,std::false_type> matches_nullptr(T) {
-    return std::false_type{};
-  }
-
- public:
-  template<class Arg1, class ... Args, std::enable_if_t<
-    std::is_same_v<pointer_type, char*> ||
-    std::is_convertible_v<Arg1, pointer_type>
-	  , size_t> = 0ul>
-  KOKKOS_FUNCTION View(Arg1 arg1, Args... args) {
-    if constexpr (std::is_same_v<pointer_type, char*>) {
-        if constexpr(std::is_same_v<const char*, Arg1>) {
-          // Label
-	  KOKKOS_IF_ON_HOST(View(Kokkos::view_alloc(std::string(arg1)), args...);)
-	  KOKKOS_IF_ON_DEVICE(Kokkos::abort("Calling allocating View constructor on device");)
-          return;
-        } else if constexpr(decltype(matches_nullptr(arg1))::value) {
-	  // Nullptr
-	  View(Kokkos::view_wrap(pointer_type(nullptr)), args...);
-          if constexpr (std::is_integral_v<Arg1>) {
-            if(arg1 != Arg1(0)) Kokkos::abort("Passing non-zero integer as first View ctor argument");
-	  }
-	  return;
-        }
-    }
-    if constexpr(std::is_convertible_v<Arg1, pointer_type>) {
-      View(Kokkos::view_wrap(pointer_type(nullptr)), args...);
-      return;
-    }
-    Kokkos::abort("Unexpected View Ctor callpath");
-  }
-#endif
 #endif
 
   // Constructor which allows always 8 sizes should be deprecated
   template <class... P>
   explicit inline View(
       const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer, const size_t> arg_N0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
+      std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer, const size_t>
+          arg_N0          = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N1 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N2 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N3 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
@@ -731,7 +698,8 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
   template <class... P>
   KOKKOS_FUNCTION explicit inline View(
       const Impl::ViewCtorProp<P...>& arg_prop,
-      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer, const size_t> arg_N0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
+      std::enable_if_t<Impl::ViewCtorProp<P...>::has_pointer, const size_t>
+          arg_N0          = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N1 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N2 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
       const size_t arg_N3 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
@@ -931,14 +899,18 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
 
   KOKKOS_FUNCTION
   constexpr typename base_t::index_type extent(size_t r) const noexcept {
-    // casting to int to avoid warning for pointeless comparison of unsigned with 0
-    if (static_cast<int>(r) >= static_cast<int>(base_t::extents_type::rank())) return 1;
+    // casting to int to avoid warning for pointeless comparison of unsigned
+    // with 0
+    if (static_cast<int>(r) >= static_cast<int>(base_t::extents_type::rank()))
+      return 1;
     return base_t::extent(r);
   }
   KOKKOS_FUNCTION
   static constexpr size_t static_extent(size_t r) noexcept {
-    // casting to int to avoid warning for pointeless comparison of unsigned with 0
-    if (static_cast<int>(r) >= static_cast<int>(base_t::extents_type::rank())) return 1;
+    // casting to int to avoid warning for pointeless comparison of unsigned
+    // with 0
+    if (static_cast<int>(r) >= static_cast<int>(base_t::extents_type::rank()))
+      return 1;
     size_t value = base_t::extents_type::static_extent(r);
     return value == Kokkos::dynamic_extent ? 0 : value;
   }

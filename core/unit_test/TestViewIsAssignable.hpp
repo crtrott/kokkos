@@ -26,11 +26,13 @@ struct TestAssignability {
       Kokkos::Impl::ViewMapping<typename ViewTypeDst::traits,
                                 typename ViewTypeSrc::traits
 #ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
-                                ,typename ViewTypeDst::specialize
+                                ,
+                                typename ViewTypeDst::specialize
 #else
-				,void
+                                ,
+                                void
 #endif
-				>;
+                                >;
 
   template <class MappingType>
   static void try_assign(

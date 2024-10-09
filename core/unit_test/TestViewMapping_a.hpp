@@ -991,7 +991,7 @@ void test_view_mapping() {
 
       ASSERT_EQ(a.use_count(), 2);
       ASSERT_EQ(b.use_count(), 2);
-      #ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
+#ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
       ASSERT_EQ(c.use_count(), 2);
 #else
       ASSERT_EQ(c.use_count(), 0);
@@ -1001,8 +1001,9 @@ void test_view_mapping() {
 
       ASSERT_EQ(a.use_count(), 2);
       ASSERT_EQ(b.use_count(), 2);
-      // FIXME: Legacy View is weird: it passes on use count even through compile time unmanaged transition
-      #ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
+// FIXME: Legacy View is weird: it passes on use count even through compile time
+// unmanaged transition
+#ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
       ASSERT_EQ(c.use_count(), 2);
       ASSERT_EQ(d.use_count(), 2);
 #else

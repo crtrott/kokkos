@@ -424,9 +424,9 @@ class DynRankView : private View<DataType*******, Properties...> {
 
  private:
 #ifndef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
-  using drdtraits = Impl::DynRankDimTraits<void>; 
+  using drdtraits = Impl::DynRankDimTraits<void>;
 #else
-  using drdtraits = Impl::DynRankDimTraits<typename view_type::specialize>;
+  using drdtraits  = Impl::DynRankDimTraits<typename view_type::specialize>;
 #endif
  public:
   // typedefs from ViewTraits, overriden
@@ -456,9 +456,9 @@ class DynRankView : private View<DataType*******, Properties...> {
   using const_scalar_array_type     = const_value_type;
   using non_const_scalar_array_type = non_const_value_type;
 #ifndef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
-  using specialize                  = void;
+  using specialize = void;
 #else
-  using specialize                  = typename view_type::specialize;
+  using specialize = typename view_type::specialize;
 #endif
 
   // typedefs in View for mdspan compatibility

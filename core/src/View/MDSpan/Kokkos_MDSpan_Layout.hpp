@@ -47,7 +47,6 @@ template <size_t Pad>
 struct is_layout_left_padded<Kokkos::Experimental::layout_left_padded<Pad>>
     : public std::true_type {};
 
-
 template <class ArrayLayout>
 struct LayoutFromArrayLayout;
 
@@ -258,9 +257,10 @@ struct Padding {
   }
 };
 
-template <class MappingType, size_t ScalarSize, class ViewCtorProperties, class... Sizes>
+template <class MappingType, size_t ScalarSize, class ViewCtorProperties,
+          class... Sizes>
 KOKKOS_INLINE_FUNCTION auto mapping_from_ctor_and_sizes(
-    const ViewCtorProperties&, const Sizes... args) {
+    const ViewCtorProperties &, const Sizes... args) {
   using layout_t = typename MappingType::layout_type;
   using ext_t    = typename MappingType::extents_type;
   ext_t ext{args...};

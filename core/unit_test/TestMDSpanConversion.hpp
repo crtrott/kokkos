@@ -65,11 +65,11 @@ struct TestViewMDSpanConversion {
     using mdspan_type =
         Kokkos::mdspan<value_type, extents_type, mdspan_layout_type>;
 
-    //static_assert(std::is_constructible_v<natural_mdspan_type, mdspan_type>);
-    //static_assert(std::is_convertible_v<mdspan_type, natural_mdspan_type> ==
-    //              std::is_convertible_v<mdspan_type, unmanaged_view_type>);
-    // Manually create an mdspan from ref so we have a valid pointer to play
-    // with
+    // static_assert(std::is_constructible_v<natural_mdspan_type, mdspan_type>);
+    // static_assert(std::is_convertible_v<mdspan_type, natural_mdspan_type> ==
+    //               std::is_convertible_v<mdspan_type, unmanaged_view_type>);
+    //  Manually create an mdspan from ref so we have a valid pointer to play
+    //  with
     const auto &exts = mapping.extents();
     auto mds         = mdspan_type{ref.data(), mapping};
 
