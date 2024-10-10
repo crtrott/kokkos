@@ -181,6 +181,24 @@ struct AccessorFromViewTraits {
                          default_accessor<typename Traits::value_type>>;
 };
 
+#ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
+template <class Traits>
+struct AccessorFromViewTraits<
+    Traits,
+    std::enable_if_t<Traits::is_managed && !Traits::memory_traits::is_atomic>> {
+  using type =
+      SpaceAwareAccessor<typename Traits::memory_space,
+                         default_accessor<typename Traits::value_type>>;
+};
+
+template <class Traits>
+struct AccessorFromViewTraits<
+    Traits,
+    std::enable_if_t<Traits::is_managed && Traits::memory_traits::is_atomic>> {
+  using type = CheckedRelaxedAtomicAccessor<
+      typename Traits::value_type, typename Traits::memory_space>;
+};
+#else
 template <class Traits>
 struct AccessorFromViewTraits<
     Traits,
@@ -197,6 +215,7 @@ struct AccessorFromViewTraits<
   using type = CheckedReferenceCountedRelaxedAtomicAccessor<
       typename Traits::value_type, typename Traits::memory_space>;
 };
+#endif
 
 template <class Traits>
 struct AccessorFromViewTraits<

@@ -34,28 +34,6 @@ static_assert(false,
 #include <optional>
 #include <type_traits>
 
-#if defined(KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK)
-
-#define KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(...)                                  \
-  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
-    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
-        m_ptr.tracker());                                                      \
-  } else {                                                                     \
-    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
-        Kokkos::Impl::SharedAllocationTracker());                              \
-  }
-
-#else
-
-#define KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(...)                                  \
-  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
-    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
-        m_ptr.tracker());                                                      \
-  } else {                                                                     \
-    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
-        Kokkos::Impl::SharedAllocationTracker());                              \
-  }
-#endif
 namespace Kokkos::Impl {
 // primary template: memory space is accessible, do nothing.
 template <class MemorySpace, class AccessSpace,
@@ -104,7 +82,101 @@ KOKKOS_FUNCTION void runtime_check_memory_access_violation(
                            MemorySpace, DefaultExecutionSpace>(track);))
 }
 
+template <class IndexType, std::size_t...Extents, class... Indices, std::size_t... Enumerate>
+KOKKOS_FUNCTION bool within_range(Kokkos::extents<IndexType, Extents...> const& exts,
+                                  std::index_sequence<Enumerate...>,
+                                  Indices... indices) {
+  return ((indices < exts.extent(Enumerate)) && ...) &&
+         ((std::is_unsigned_v<decltype(indices)> || (indices >= static_cast<decltype(indices)>(0))) && ...);
+}
+
+template <class... Indices>
+KOKKOS_FUNCTION constexpr char* append_formatted_multidimensional_index(
+    char* dest, Indices... indices) {
+  char* d = dest;
+  strcat(d, "[");
+  (
+      [&] {
+        d += strlen(d);
+        to_chars_i(d,
+                   d + 20,  // 20 digits ought to be enough
+                   indices);
+        strcat(d, ",");
+      }(),
+      ...);
+  d[strlen(d) - 1] = ']';  // overwrite trailing comma
+  return dest;
+}
+
+template <class IndexType, size_t ... Extents, std::size_t... Enumerate>
+KOKKOS_FUNCTION void print_extents(char* dest, Kokkos::extents<IndexType, Extents...> const& exts,
+                                   std::index_sequence<Enumerate...>) {
+  append_formatted_multidimensional_index(dest, exts.extent(Enumerate)...);
+}
+
+
+template <class ExtentsType, class ... IndexTypes>
+KOKKOS_INLINE_FUNCTION void view_verify_operator_bounds(
+    SharedAllocationTracker const& tracker, const ExtentsType& exts, const void* data, IndexTypes ... idx) {
+  using idx_t = typename ExtentsType::index_type;
+  if (!within_range(exts, std::make_index_sequence<sizeof...(IndexTypes)>(),
+                    idx...)) {
+    char err[256] = "";
+    strcat(err, "Kokkos::View ERROR: out of bounds access");
+    strcat(err, " label=(\"");
+    KOKKOS_IF_ON_HOST(
+        if (tracker.has_record()) {
+          strncat(err, tracker.template get_label<void>().c_str(),
+                  128);
+        } else { strcat(err, "**UNMANAGED**"); })
+    KOKKOS_IF_ON_DEVICE([&] {
+      // Check #1: is there a SharedAllocationRecord?  (we won't use it, but
+      // if its not there then there isn't a corresponding
+      // SharedAllocationHeader containing a label).  This check should cover
+      // the case of Views that don't have the Unmanaged trait but were
+      // initialized by pointer.
+      if (!tracker.has_record()) {
+        strcat(err, "**UNMANAGED**");
+        return;
+      }
+      SharedAllocationHeader const* const header =
+        SharedAllocationHeader::get_header(data);
+      char const* const label = header->label();
+      strcat(err, label);
+    }();)
+    strcat(err, "\") with indices ");
+    append_formatted_multidimensional_index(err, static_cast<idx_t>(idx)...);
+    strcat(err, " but extents ");
+    print_extents(err, exts, std::make_index_sequence<sizeof...(IndexTypes)>());
+    Kokkos::abort(err);
+  }
+}
 }  // namespace Kokkos::Impl
+
+#if defined(KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK)
+
+#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                                  \
+  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        m_ptr.tracker());                                                      \
+    Kokkos::Impl::view_verify_operator_bounds(m_ptr.tracker(), m_map.extents(), m_ptr.get(), __VA_ARGS__); \
+  } else {                                                                     \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        Kokkos::Impl::SharedAllocationTracker());                              \
+    Kokkos::Impl::view_verify_operator_bounds(Kokkos::Impl::SharedAllocationTracker(), m_map.extents(), m_ptr, __VA_ARGS__); \
+  }
+
+#else
+
+#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                                  \
+  if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        m_ptr.tracker());                                                      \
+  } else {                                                                     \
+    Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
+        Kokkos::Impl::SharedAllocationTracker());                              \
+  }
+#endif
 
 #define KOKKOS_IMPL_NO_UNIQUE_ADDRESS _MDSPAN_NO_UNIQUE_ADDRESS
 namespace Kokkos {
@@ -526,30 +598,6 @@ class BasicView {
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
-
-  template <class OtherIndexType>
-    requires(
-        std::is_convertible_v<const OtherIndexType &, index_type> &&
-        std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
-  KOKKOS_FUNCTION constexpr reference operator[](
-      const Array<OtherIndexType, rank()> &indices) const {
-    return m_acc.access(m_ptr,
-                        [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
-                          return m_map(indices[Idxs]...);
-                        }(std::make_index_sequence<rank()>()));
-  }
-
-  template <class OtherIndexType>
-    requires(
-        std::is_convertible_v<const OtherIndexType &, index_type> &&
-        std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
-  KOKKOS_FUNCTION constexpr reference operator[](
-      std::span<OtherIndexType, rank()> indices) const {
-    return m_acc.access(m_ptr,
-                        [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
-                          return m_map(indices[Idxs]...);
-                        }(std::make_index_sequence<rank()>()));
-  }
 #endif
 
   // C++20 operator()
@@ -560,35 +608,9 @@ class BasicView {
              (sizeof...(OtherIndexTypes) == rank()))
   KOKKOS_FUNCTION constexpr reference operator()(
       OtherIndexTypes... indices) const {
-    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
+    KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(m_map, indices...);
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
-  }
-
-  template <class OtherIndexType>
-    requires(
-        std::is_convertible_v<const OtherIndexType &, index_type> &&
-        std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
-  KOKKOS_FUNCTION constexpr reference operator()(
-      const Array<OtherIndexType, rank()> &indices) const {
-    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices);
-    return m_acc.access(m_ptr,
-                        [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
-                          return m_map(indices[Idxs]...);
-                        }(std::make_index_sequence<rank()>()));
-  }
-
-  template <class OtherIndexType>
-    requires(
-        std::is_convertible_v<const OtherIndexType &, index_type> &&
-        std::is_nothrow_constructible_v<index_type, const OtherIndexType &>)
-  KOKKOS_FUNCTION constexpr reference operator()(
-      std::span<OtherIndexType, rank()> indices) const {
-    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices);
-    return m_acc.access(m_ptr,
-                        [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
-                          return m_map(indices[Idxs]...);
-                        }(std::make_index_sequence<rank()>()));
   }
 #else
   // C++17 variant of operator()
@@ -603,7 +625,7 @@ class BasicView {
     static_assert(
         (std::is_nothrow_constructible_v<index_type, OtherIndexTypes> && ...));
     static_assert((sizeof...(OtherIndexTypes)) == rank());
-    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
+    KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(indices...)
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
@@ -616,7 +638,7 @@ class BasicView {
           ((sizeof...(OtherIndexTypes)) == rank()),
       reference>
   operator()(OtherIndexTypes... indices) const {
-    KOKKOS_IMPL_VIEW_OPERATOR_VERIFY(m_map, indices...);
+    KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(indices...)
     return m_acc.access(m_ptr,
                         m_map(static_cast<index_type>(std::move(indices))...));
   }
