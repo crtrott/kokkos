@@ -195,17 +195,16 @@ template <class Traits>
 struct AccessorFromViewTraits<
     Traits,
     std::enable_if_t<Traits::is_managed && Traits::memory_traits::is_atomic>> {
-  using type = CheckedRelaxedAtomicAccessor<
-      typename Traits::value_type, typename Traits::memory_space>;
+  using type = CheckedRelaxedAtomicAccessor<typename Traits::value_type,
+                                            typename Traits::memory_space>;
 };
 #else
 template <class Traits>
 struct AccessorFromViewTraits<
     Traits,
     std::enable_if_t<Traits::is_managed && !Traits::memory_traits::is_atomic>> {
-  using type =
-      CheckedReferenceCountedAccessor<typename Traits::value_type,
-                                         typename Traits::memory_space>;
+  using type = CheckedReferenceCountedAccessor<typename Traits::value_type,
+                                               typename Traits::memory_space>;
 };
 
 template <class Traits>
@@ -222,7 +221,7 @@ struct AccessorFromViewTraits<
     Traits,
     std::enable_if_t<!Traits::is_managed && Traits::memory_traits::is_atomic>> {
   using type = CheckedRelaxedAtomicAccessor<typename Traits::value_type,
-                                               typename Traits::memory_space>;
+                                            typename Traits::memory_space>;
 };
 
 template <class Traits>
@@ -241,11 +240,11 @@ struct MDSpanViewTraits<Traits, std::void_t<typename LayoutFromArrayLayout<
   using index_type = std::size_t;
   using extents_type =
       typename ExtentsFromDataType<index_type,
-                                         typename Traits::data_type>::type;
+                                   typename Traits::data_type>::type;
   using mdspan_layout_type =
       typename LayoutFromArrayLayout<typename Traits::array_layout>::type;
   using accessor_type = accessor_from_view_traits_t<Traits>;
-  using mdspan_type = mdspan<typename Traits::value_type, extents_type,
+  using mdspan_type   = mdspan<typename Traits::value_type, extents_type,
                              mdspan_layout_type, accessor_type>;
 };
 }  // namespace Impl

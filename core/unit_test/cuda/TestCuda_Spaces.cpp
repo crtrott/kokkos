@@ -306,7 +306,7 @@ struct TestViewCudaTexture {
         (std::is_same<typename T::reference_type, const double>::value));
 #endif
 
-    EXPECT_TRUE(V::reference_type_is_lvalue_reference);   // An ordinary view.
+    EXPECT_TRUE(V::reference_type_is_lvalue_reference);  // An ordinary view.
 #ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
     EXPECT_FALSE(T::reference_type_is_lvalue_reference);  // Texture fetch
                                                           // returns by value.

@@ -82,18 +82,21 @@ KOKKOS_FUNCTION void runtime_check_memory_access_violation(
                            MemorySpace, DefaultExecutionSpace>(track);))
 }
 
-template <class IndexType, std::size_t...Extents, class... Indices, std::size_t... Enumerate>
-KOKKOS_FUNCTION bool within_range(Kokkos::extents<IndexType, Extents...> const& exts,
-                                  std::index_sequence<Enumerate...>,
-                                  Indices... indices) {
+template <class IndexType, std::size_t... Extents, class... Indices,
+          std::size_t... Enumerate>
+KOKKOS_FUNCTION bool within_range(
+    Kokkos::extents<IndexType, Extents...> const &exts,
+    std::index_sequence<Enumerate...>, Indices... indices) {
   return ((indices < exts.extent(Enumerate)) && ...) &&
-         ((std::is_unsigned_v<decltype(indices)> || (indices >= static_cast<decltype(indices)>(0))) && ...);
+         ((std::is_unsigned_v<decltype(indices)> ||
+           (indices >= static_cast<decltype(indices)>(0))) &&
+          ...);
 }
 
 template <class... Indices>
-KOKKOS_FUNCTION constexpr char* append_formatted_multidimensional_index(
-    char* dest, Indices... indices) {
-  char* d = dest;
+KOKKOS_FUNCTION constexpr char *append_formatted_multidimensional_index(
+    char *dest, Indices... indices) {
+  char *d = dest;
   strcat(d, "[");
   (
       [&] {
@@ -108,16 +111,17 @@ KOKKOS_FUNCTION constexpr char* append_formatted_multidimensional_index(
   return dest;
 }
 
-template <class IndexType, size_t ... Extents, std::size_t... Enumerate>
-KOKKOS_FUNCTION void print_extents(char* dest, Kokkos::extents<IndexType, Extents...> const& exts,
-                                   std::index_sequence<Enumerate...>) {
+template <class IndexType, size_t... Extents, std::size_t... Enumerate>
+KOKKOS_FUNCTION void print_extents(
+    char *dest, Kokkos::extents<IndexType, Extents...> const &exts,
+    std::index_sequence<Enumerate...>) {
   append_formatted_multidimensional_index(dest, exts.extent(Enumerate)...);
 }
 
-
-template <class ExtentsType, class ... IndexTypes>
+template <class ExtentsType, class... IndexTypes>
 KOKKOS_INLINE_FUNCTION void view_verify_operator_bounds(
-    SharedAllocationTracker const& tracker, const ExtentsType& exts, const void* data, IndexTypes ... idx) {
+    SharedAllocationTracker const &tracker, const ExtentsType &exts,
+    const void *data, IndexTypes... idx) {
   using idx_t = typename ExtentsType::index_type;
   if (!within_range(exts, std::make_index_sequence<sizeof...(IndexTypes)>(),
                     idx...)) {
@@ -126,8 +130,7 @@ KOKKOS_INLINE_FUNCTION void view_verify_operator_bounds(
     strcat(err, " label=(\"");
     KOKKOS_IF_ON_HOST(
         if (tracker.has_record()) {
-          strncat(err, tracker.template get_label<void>().c_str(),
-                  128);
+          strncat(err, tracker.template get_label<void>().c_str(), 128);
         } else { strcat(err, "**UNMANAGED**"); })
     KOKKOS_IF_ON_DEVICE([&] {
       // Check #1: is there a SharedAllocationRecord?  (we won't use it, but
@@ -139,9 +142,9 @@ KOKKOS_INLINE_FUNCTION void view_verify_operator_bounds(
         strcat(err, "**UNMANAGED**");
         return;
       }
-      SharedAllocationHeader const* const header =
-        SharedAllocationHeader::get_header(data);
-      char const* const label = header->label();
+      SharedAllocationHeader const *const header =
+          SharedAllocationHeader::get_header(data);
+      char const *const label = header->label();
       strcat(err, label);
     }();)
     strcat(err, "\") with indices ");
@@ -155,20 +158,23 @@ KOKKOS_INLINE_FUNCTION void view_verify_operator_bounds(
 
 #if defined(KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK)
 
-#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                                  \
+#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                             \
   if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
     Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
         m_ptr.tracker());                                                      \
-    Kokkos::Impl::view_verify_operator_bounds(m_ptr.tracker(), m_map.extents(), m_ptr.get(), __VA_ARGS__); \
+    Kokkos::Impl::view_verify_operator_bounds(                                 \
+        m_ptr.tracker(), m_map.extents(), m_ptr.get(), __VA_ARGS__);           \
   } else {                                                                     \
     Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
         Kokkos::Impl::SharedAllocationTracker());                              \
-    Kokkos::Impl::view_verify_operator_bounds(Kokkos::Impl::SharedAllocationTracker(), m_map.extents(), m_ptr, __VA_ARGS__); \
+    Kokkos::Impl::view_verify_operator_bounds(                                 \
+        Kokkos::Impl::SharedAllocationTracker(), m_map.extents(), m_ptr,       \
+        __VA_ARGS__);                                                          \
   }
 
 #else
 
-#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                                  \
+#define KOKKOS_IMPL_BASICVIEW_OPERATOR_VERIFY(...)                             \
   if constexpr (Impl::IsReferenceCountedDataHandle<data_handle_type>::value) { \
     Kokkos::Impl::runtime_check_memory_access_violation<memory_space>(         \
         m_ptr.tracker());                                                      \
