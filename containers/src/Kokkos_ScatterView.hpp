@@ -43,12 +43,14 @@ struct ScatterProd {};
 struct ScatterMax {};
 struct ScatterMin {};
 
+// Deprecate this
 struct ScatterNonDuplicated {};
-struct ScatterDuplicated {};
-
 struct ScatterNonAtomic {};
-struct ScatterAtomic {};
 
+// Scatter Mechanism
+struct ScatterDuplicated {}; // CPUs & GPUs
+struct ScatterAtomic {}; // GPUs
+struct ScatterNone {}; // Serial only
 }  // namespace Experimental
 }  // namespace Kokkos
 
@@ -56,147 +58,42 @@ namespace Kokkos {
 namespace Impl {
 
 template <typename ExecSpace>
-struct DefaultDuplication;
+struct DefaultDuplication {
+  private:
+    static constexpr auto mechanism_deduce() {
+      #ifdef KOKKOS_ENABLE_SERIAL
+      if constexpr (std::is_same_v<ExecSpace, Serial>) {
+        return Kokkos::Experimental::ScatterNonDuplicated{};
+      } else
+      #endif
+      if constexpr (std::is_same_v<ExecSpace, DefaultHostExecutionSpace>) {
+        return Kokkos::Experimental::ScatterDuplicated{};
+      } else {
+        return Kokkos::Experimental::ScatterNonDuplicated{};
+      }
+    }
+  public:
+    using type = decltype(mechanism_deduce());
+};
 
 template <typename ExecSpace, typename Duplication>
-struct DefaultContribution;
-
-#ifdef KOKKOS_ENABLE_SERIAL
-template <>
-struct DefaultDuplication<Kokkos::Serial> {
-  using type = Kokkos::Experimental::ScatterNonDuplicated;
+struct DefaultContribution {
+  private:
+    static constexpr auto mechanism_deduce() {
+      #ifdef KOKKOS_ENABLE_SERIAL
+      if constexpr (std::is_same_v<ExecSpace, Serial>) {
+        return Kokkos::Experimental::ScatterNonAtomic{};
+      } else
+      #endif
+      if constexpr (std::is_same_v<Duplication, Kokkos::Experimental::ScatterNonDuplicated>) {
+        return Kokkos::Experimental::ScatterAtomic{};
+      } else {
+        return Kokkos::Experimental::ScatterNonAtomic{};
+      }
+    }
+  public:
+    using type = decltype(mechanism_deduce());
 };
-
-template <>
-struct DefaultContribution<Kokkos::Serial,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::Serial,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_OPENMP
-template <>
-struct DefaultDuplication<Kokkos::OpenMP> {
-  using type = Kokkos::Experimental::ScatterDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::OpenMP,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::OpenMP,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_OPENMPTARGET
-template <>
-struct DefaultDuplication<Kokkos::Experimental::OpenMPTarget> {
-  using type = Kokkos::Experimental::ScatterNonDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::Experimental::OpenMPTarget,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::Experimental::OpenMPTarget,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_HPX
-template <>
-struct DefaultDuplication<Kokkos::Experimental::HPX> {
-  using type = Kokkos::Experimental::ScatterDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::Experimental::HPX,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::Experimental::HPX,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_THREADS
-template <>
-struct DefaultDuplication<Kokkos::Threads> {
-  using type = Kokkos::Experimental::ScatterDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::Threads,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::Threads,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterNonAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_CUDA
-template <>
-struct DefaultDuplication<Kokkos::Cuda> {
-  using type = Kokkos::Experimental::ScatterNonDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::Cuda,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::Cuda,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_HIP
-template <>
-struct DefaultDuplication<Kokkos::HIP> {
-  using type = Kokkos::Experimental::ScatterNonDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::HIP,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::HIP,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-#endif
-
-#ifdef KOKKOS_ENABLE_SYCL
-template <>
-struct DefaultDuplication<Kokkos::SYCL> {
-  using type = Kokkos::Experimental::ScatterNonDuplicated;
-};
-template <>
-struct DefaultContribution<Kokkos::SYCL,
-                           Kokkos::Experimental::ScatterNonDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-template <>
-struct DefaultContribution<Kokkos::SYCL,
-                           Kokkos::Experimental::ScatterDuplicated> {
-  using type = Kokkos::Experimental::ScatterAtomic;
-};
-#endif
 
 // FIXME All these scatter values need overhaul:
 //   - like should they be copyable at all?
