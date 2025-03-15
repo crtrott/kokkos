@@ -433,10 +433,10 @@ template <typename DeviceType, typename Layout, typename Op,
 struct test_default_scatter_sub_view {
  public:
   using default_duplication =
-      Kokkos::Impl::DefaultDuplication<typename DeviceType::execution_space>;
+      Kokkos::Impl::DefaultDuplication<typename DeviceType::execution_space, void>;
   using Duplication  = typename default_duplication::type;
   using Contribution = typename Kokkos::Impl::DefaultContribution<
-      typename DeviceType::execution_space, Duplication>::type;
+      typename DeviceType::execution_space, Duplication, void>::type;
   using scatter_view_def =
       typename test_scatter_view_impl_cls<DeviceType, Layout, Duplication,
                                           Contribution, Op,
@@ -488,10 +488,10 @@ template <typename DeviceType, typename Layout, typename Op,
 struct test_default_scatter_view {
  public:
   using default_duplication =
-      Kokkos::Impl::DefaultDuplication<typename DeviceType::execution_space>;
+      Kokkos::Impl::DefaultDuplication<typename DeviceType::execution_space, void>;
   using Duplication  = typename default_duplication::type;
   using Contribution = typename Kokkos::Impl::DefaultContribution<
-      typename DeviceType::execution_space, Duplication>::type;
+      typename DeviceType::execution_space, Duplication, void>::type;
   using scatter_view_def =
       typename test_scatter_view_impl_cls<DeviceType, Layout, Duplication,
                                           Contribution, Op,

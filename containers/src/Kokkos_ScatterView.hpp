@@ -57,18 +57,38 @@ struct ScatterNone {}; // Serial only
 namespace Kokkos {
 namespace Impl {
 
-template <typename ExecSpace>
+template <class ExecSpace, class Duplication>
 struct DefaultDuplication {
+    // The Duplication parameter can not be validly set to ScatterNonAtomic
+    // Redundant check with below: but expresses intent very clearly here.
+    static_assert(!std::is_same_v<Duplication, Kokkos::Experimental::ScatterNonAtomic>);
+
+    // FIXME: deprecate fourth check
+    static_assert(std::is_same_v<Duplication, void> ||
+                  std::is_same_v<Duplication, Kokkos::Experimental::ScatterDuplicated> ||
+                  std::is_same_v<Duplication, Kokkos::Experimental::ScatterAtomic> ||
+                  std::is_same_v<Duplication, Kokkos::Experimental::ScatterNone> ||
+                  std::is_same_v<Duplication, Kokkos::Experimental::ScatterNonDuplicated>);
+
   private:
     static constexpr auto mechanism_deduce() {
-      #ifdef KOKKOS_ENABLE_SERIAL
-      if constexpr (std::is_same_v<ExecSpace, Serial>) {
-        return Kokkos::Experimental::ScatterNonDuplicated{};
-      } else
-      #endif
-      if constexpr (std::is_same_v<ExecSpace, DefaultHostExecutionSpace>) {
+      // First cover the default case depending on exec space
+      if constexpr (std::is_same_v<Duplication, void>) { 
+        #ifdef KOKKOS_ENABLE_SERIAL
+        if constexpr (std::is_same_v<ExecSpace, Serial>) {
+          return Kokkos::Experimental::ScatterNonDuplicated{};
+        } else
+        #endif
+        if constexpr (std::is_same_v<ExecSpace, DefaultHostExecutionSpace>) {
+          return Kokkos::Experimental::ScatterDuplicated{};
+        } else {
+          return Kokkos::Experimental::ScatterNonDuplicated{};
+        }
+      // Now look at the non-default case
+      } else if constexpr (std::is_same_v<Duplication, Kokkos::Experimental::ScatterDuplicated>) {
         return Kokkos::Experimental::ScatterDuplicated{};
       } else {
+        // ScatterAtomic, ScatterNone, ScatterNonDuplicated
         return Kokkos::Experimental::ScatterNonDuplicated{};
       }
     }
@@ -76,19 +96,35 @@ struct DefaultDuplication {
     using type = decltype(mechanism_deduce());
 };
 
-template <typename ExecSpace, typename Duplication>
+template <class ExecSpace, class Duplication, class Contribution>
 struct DefaultContribution {
+    static_assert(std::is_same_v<Contribution, void> ||
+                  std::is_same_v<Contribution, Kokkos::Experimental::ScatterAtomic> ||
+                  std::is_same_v<Contribution, Kokkos::Experimental::ScatterNonAtomic>);
+    
   private:
+    using duplication_type = typename DefaultDuplication<ExecSpace, Duplication>::type;
     static constexpr auto mechanism_deduce() {
-      #ifdef KOKKOS_ENABLE_SERIAL
-      if constexpr (std::is_same_v<ExecSpace, Serial>) {
+      // First cover the none case
+      if constexpr (std::is_same_v<Duplication, Kokkos::Experimental::ScatterNone>) {
+        // if Duplication is set to ScatterNone, Contribution must be void
+        static_assert(std::is_same_v<Contribution, void>);
         return Kokkos::Experimental::ScatterNonAtomic{};
       } else
-      #endif
-      if constexpr (std::is_same_v<Duplication, Kokkos::Experimental::ScatterNonDuplicated>) {
-        return Kokkos::Experimental::ScatterAtomic{};
+      // Now cover the default case depending on exec space
+      if constexpr (std::is_same_v<Contribution, void>) { 
+        #ifdef KOKKOS_ENABLE_SERIAL
+        if constexpr (std::is_same_v<ExecSpace, Serial>) {
+          return Kokkos::Experimental::ScatterNonAtomic{};
+        } else
+        #endif
+        if constexpr (std::is_same_v<duplication_type, Kokkos::Experimental::ScatterNonDuplicated>) {
+          return Kokkos::Experimental::ScatterAtomic{};
+        } else {
+          return Kokkos::Experimental::ScatterNonAtomic{};
+        }
       } else {
-        return Kokkos::Experimental::ScatterNonAtomic{};
+        return Contribution{};
       }
     }
   public:
@@ -566,13 +602,11 @@ void check_scatter_view_allocation_properties_argument(
 }
 
 template <typename DataType,
-          typename Layout      = Kokkos::DefaultExecutionSpace::array_layout,
-          typename DeviceType  = Kokkos::DefaultExecutionSpace,
-          typename Op          = Kokkos::Experimental::ScatterSum,
-          typename Duplication = typename Kokkos::Impl::DefaultDuplication<
-              typename DeviceType::execution_space>::type,
-          typename Contribution = typename Kokkos::Impl::DefaultContribution<
-              typename DeviceType::execution_space, Duplication>::type>
+          typename Layout,
+          typename DeviceType,
+          typename Op,
+          typename Duplication,
+          typename Contribution>
 class ScatterViewImpl;
 
 template <class>
@@ -1415,21 +1449,10 @@ template <typename Op          = Kokkos::Experimental::ScatterSum,
 ScatterViewImpl<
     RT, typename ViewTraits<RT, RP...>::array_layout,
     typename ViewTraits<RT, RP...>::device_type, Op,
-    std::conditional_t<
-        std::is_void_v<Duplication>,
         typename Kokkos::Impl::DefaultDuplication<
-            typename ViewTraits<RT, RP...>::execution_space>::type,
-        Duplication>,
-    std::conditional_t<
-        std::is_void_v<Contribution>,
+            typename ViewTraits<RT, RP...>::execution_space, Duplication>::type,
         typename Kokkos::Impl::DefaultContribution<
-            typename ViewTraits<RT, RP...>::execution_space,
-            typename std::conditional_t<
-                std::is_void_v<Duplication>,
-                typename Kokkos::Impl::DefaultDuplication<
-                    typename ViewTraits<RT, RP...>::execution_space>::type,
-                Duplication>>::type,
-        Contribution>>
+            typename ViewTraits<RT, RP...>::execution_space, Duplication, Contribution>::type>
 create_scatter_view(View<RT, RP...> const& original_view) {
   return original_view;  // implicit ScatterViewImpl constructor call
 }
@@ -1438,12 +1461,10 @@ template <typename Op, typename RT, typename... RP>
 ScatterViewImpl<
     RT, typename ViewTraits<RT, RP...>::array_layout,
     typename ViewTraits<RT, RP...>::device_type, Op,
-    typename Kokkos::Impl::DefaultDuplication<
-        typename ViewTraits<RT, RP...>::execution_space>::type,
-    typename Kokkos::Impl::DefaultContribution<
-        typename ViewTraits<RT, RP...>::execution_space,
         typename Kokkos::Impl::DefaultDuplication<
-            typename ViewTraits<RT, RP...>::execution_space>::type>::type>
+            typename ViewTraits<RT, RP...>::execution_space, void>::type,
+        typename Kokkos::Impl::DefaultContribution<
+            typename ViewTraits<RT, RP...>::execution_space, void, void>::type>
 create_scatter_view(Op, View<RT, RP...> const& original_view) {
   return original_view;  // implicit ScatterViewImpl constructor call
 }
@@ -1480,16 +1501,17 @@ void contribute(View<DT1, VP...>& dest,
 namespace Kokkos {
 namespace Experimental {
 template <typename DataType,
-          typename Layout      = Kokkos::DefaultExecutionSpace::array_layout,
-          typename DeviceType  = Kokkos::DefaultExecutionSpace,
-          typename Op          = Kokkos::Experimental::ScatterSum,
-          typename Duplication = typename Kokkos::Impl::DefaultDuplication<
-              typename DeviceType::execution_space>::type,
-          typename Contribution = typename Kokkos::Impl::DefaultContribution<
-              typename DeviceType::execution_space, Duplication>::type>
+          typename Layout       = Kokkos::DefaultExecutionSpace::array_layout,
+          typename DeviceType   = Kokkos::DefaultExecutionSpace,
+          typename Op           = Kokkos::Experimental::ScatterSum,
+          typename Duplication  = void,
+          typename Contribution = void>
 using ScatterView =
-    Kokkos::Impl::ScatterViewImpl<DataType, Layout, DeviceType, Op, Duplication,
-                                  Contribution>;
+    Kokkos::Impl::ScatterViewImpl<DataType, Layout, DeviceType, Op,
+         typename Kokkos::Impl::DefaultDuplication<
+              typename DeviceType::execution_space, Duplication>::type,
+         typename Kokkos::Impl::DefaultContribution<
+              typename DeviceType::execution_space, Duplication, Contribution>::type>;
 
 using Kokkos::Impl::contribute;
 using Kokkos::Impl::create_scatter_view;
@@ -1501,7 +1523,7 @@ template <typename DT, typename LY, typename ES, typename OP, typename CT,
           typename DP, typename... IS, class... ViewCtorArgs>
 void realloc(
     const Impl::ViewCtorProp<ViewCtorArgs...>& arg_prop,
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.realloc(arg_prop, is...);
 }
@@ -1509,7 +1531,7 @@ void realloc(
 template <typename DT, typename LY, typename ES, typename OP, typename CT,
           typename DP, typename... IS>
 void realloc(
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.realloc(is...);
 }
@@ -1518,7 +1540,7 @@ template <typename I, typename DT, typename LY, typename ES, typename OP,
           typename CT, typename DP, typename... IS>
 std::enable_if_t<Kokkos::Impl::is_view_ctor_property<I>::value> realloc(
     const I& arg_prop,
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.realloc(arg_prop, is...);
 }
@@ -1526,7 +1548,7 @@ std::enable_if_t<Kokkos::Impl::is_view_ctor_property<I>::value> realloc(
 template <typename DT, typename LY, typename ES, typename OP, typename CT,
           typename DP, typename... IS>
 void resize(
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.resize(is...);
 }
@@ -1535,7 +1557,7 @@ template <class... ViewCtorArgs, typename DT, typename LY, typename ES,
           typename OP, typename CT, typename DP, typename... IS>
 void resize(
     const Impl::ViewCtorProp<ViewCtorArgs...>& arg_prop,
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.resize(arg_prop, is...);
 }
@@ -1544,7 +1566,7 @@ template <typename I, typename DT, typename LY, typename ES, typename OP,
           typename CT, typename DP, typename... IS>
 std::enable_if_t<Kokkos::Impl::is_view_ctor_property<I>::value> resize(
     const I& arg_prop,
-    Kokkos::Experimental::ScatterView<DT, LY, ES, OP, CT, DP>& scatter_view,
+    Kokkos::Impl::ScatterViewImpl<DT, LY, ES, OP, CT, DP>& scatter_view,
     IS... is) {
   scatter_view.resize(arg_prop, is...);
 }
