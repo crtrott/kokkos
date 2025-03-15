@@ -20,6 +20,34 @@
 #include <Kokkos_ScatterView.hpp>
 #include <gtest/gtest.h>
 
+
+// Check that the aliases do what we expect
+namespace {
+  using L = Kokkos::LayoutRight;
+  using D = Kokkos::DefaultExecutionSpace;
+  using H = Kokkos::DefaultHostExecutionSpace;
+  using O = Kokkos::Experimental::ScatterSum;
+
+  using Kokkos::Experimental::ScatterView;
+  using Kokkos::Experimental::ScatterNonDuplicated;
+  using Kokkos::Experimental::ScatterNonAtomic;
+  using Kokkos::Experimental::ScatterDuplicated;
+  using Kokkos::Experimental::ScatterAtomic;
+  using Kokkos::Experimental::ScatterNone;
+
+  static_assert(std::is_same_v<
+    ScatterView<int*, L, D, O, ScatterNone>,
+    ScatterView<int*, L, D, O, ScatterNonDuplicated, ScatterNonAtomic>>);
+  static_assert(std::is_same_v<
+    ScatterView<int*, L, D, O, ScatterAtomic>,
+    ScatterView<int*, L, D, O, ScatterNonDuplicated, ScatterAtomic>>);
+  // Duplication is not allowed with GPU backends yet, use H here
+  static_assert(std::is_same_v<
+    ScatterView<int*, L, H, O, ScatterDuplicated>,
+    ScatterView<int*, L, H, O, ScatterDuplicated, ScatterNonAtomic>>);
+
+}
+
 namespace Test {
 
 template <typename DeviceType, typename Layout, typename Duplication,
