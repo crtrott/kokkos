@@ -765,28 +765,14 @@ TEST(TEST_CATEGORY, scatterview) {
   test_scatter_view<TEST_EXECSPACE, Kokkos::Experimental::ScatterProd>(10);
   test_scatter_view<TEST_EXECSPACE, Kokkos::Experimental::ScatterMin>(10);
   test_scatter_view<TEST_EXECSPACE, Kokkos::Experimental::ScatterMax>(10);
-  // tests were timing out in DEBUG mode, reduce the amount of work
-#ifdef KOKKOS_ENABLE_DEBUG
-  int big_n = 100 * 1000;
-#else
 
-#if defined(KOKKOS_ENABLE_SERIAL) || defined(KOKKOS_ENABLE_OPENMP)
-#if defined(KOKKOS_ENABLE_SERIAL)
-  bool is_serial = std::is_same_v<TEST_EXECSPACE, Kokkos::Serial>;
-#else
-  bool is_serial = false;
-#endif
-#if defined(KOKKOS_ENABLE_OPENMP)
-  bool is_openmp = std::is_same_v<TEST_EXECSPACE, Kokkos::OpenMP>;
-#else
-  bool is_openmp = false;
-#endif
-  int big_n      = is_serial || is_openmp ? 100 * 1000 : 10000 * 1000;
-#else
-  int big_n = 10000 * 1000;
-#endif
-
-#endif
+  int big_n = 100'000;
+  // Make more work for GPUs so we actually have enough threads to cause conflicts
+  #ifndef KOKKOS_ENABLE_DEBUG
+  if(!std::is_same_v<Kokkos::DefaultExecutionSpace, Kokkos::DefaultHostExecutionSpace>) {
+   big_n *= 100;
+  }
+  #endif
 
   test_scatter_view<TEST_EXECSPACE, Kokkos::Experimental::ScatterSum, double>(
       big_n);
