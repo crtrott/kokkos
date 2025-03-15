@@ -703,7 +703,8 @@ class ScatterViewImpl<DataType, Layout, DeviceType, Op,
                          Contribution, OverrideContribution>(*this);
   }
 
-  original_view_type subview() const { return internal_view; }
+  original_view_type base_view() const { return internal_view; }
+  auto subview() const { return base_view(); }
 
   KOKKOS_INLINE_FUNCTION constexpr bool is_allocated() const {
     return internal_view.is_allocated();
@@ -730,20 +731,29 @@ class ScatterViewImpl<DataType, Layout, DeviceType, Op,
         internal_view.label());
   }
 
-  void reset(execution_space const& exec_space = execution_space()) {
+  void reset(execution_space const& exec_space = execution_space()) const {
     Kokkos::Impl::ResetDuplicates<execution_space, original_value_type, Op>(
         exec_space, internal_view.data(), internal_view.size(),
         internal_view.label());
   }
   template <typename DT, typename... RP>
-  void reset_except(View<DT, RP...> const& view) {
+  void reset_except(View<DT, RP...> const& view) const {
     reset_except(execution_space(), view);
   }
 
   template <typename DT, typename... RP>
   void reset_except(const execution_space& exec_space,
-                    View<DT, RP...> const& view) {
+                    View<DT, RP...> const& view) const {
     if (view.data() != internal_view.data()) reset(exec_space);
+  }
+
+  void accumulate(execution_space const& exec_space) const {
+    contribute_into(exec_space, base_view());
+    reset_except(exec_space, base_view());
+  }
+
+  void accumulate() const {
+    accumulate(execution_space());
   }
 
   void resize(const size_t n0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
@@ -988,10 +998,11 @@ class ScatterViewImpl<DataType, Kokkos::LayoutRight, DeviceType, Op,
                          OverrideContribution>(*this);
   }
 
-  auto subview() const {
+  auto base_view() const {
     return Kokkos::Impl::Slice<Kokkos::LayoutRight, internal_view_type::rank,
                                internal_view_type>::get(internal_view, 0);
   }
+  auto subview() const { return base_view(); }
 
   KOKKOS_INLINE_FUNCTION constexpr bool is_allocated() const {
     return internal_view.is_allocated();
@@ -1020,20 +1031,20 @@ class ScatterViewImpl<DataType, Kokkos::LayoutRight, DeviceType, Op,
         start, internal_view.extent(0), internal_view.label());
   }
 
-  void reset(execution_space const& exec_space = execution_space()) {
+  void reset(execution_space const& exec_space = execution_space()) const {
     Kokkos::Impl::ResetDuplicates<execution_space, original_value_type, Op>(
         exec_space, internal_view.data(), internal_view.size(),
         internal_view.label());
   }
 
   template <typename DT, typename... RP>
-  void reset_except(View<DT, RP...> const& view) {
+  void reset_except(View<DT, RP...> const& view) const {
     reset_except(execution_space(), view);
   }
 
   template <typename DT, typename... RP>
   void reset_except(execution_space const& exec_space,
-                    View<DT, RP...> const& view) {
+                    View<DT, RP...> const& view) const {
     if (view.data() != internal_view.data()) {
       reset(exec_space);
       return;
@@ -1041,6 +1052,15 @@ class ScatterViewImpl<DataType, Kokkos::LayoutRight, DeviceType, Op,
     Kokkos::Impl::ResetDuplicates<execution_space, original_value_type, Op>(
         exec_space, internal_view.data() + view.size(),
         internal_view.size() - view.size(), internal_view.label());
+  }
+
+  void accumulate(execution_space const& exec_space) const {
+    contribute_into(exec_space, base_view());
+    reset_except(exec_space, base_view());
+  }
+
+  void accumulate() const {
+    accumulate(execution_space());
   }
 
   void resize(const size_t n0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
@@ -1267,10 +1287,11 @@ class ScatterViewImpl<DataType, Kokkos::LayoutLeft, DeviceType, Op,
                          OverrideContribution>(*this);
   }
 
-  auto subview() const {
+  auto base_view() const {
     return Kokkos::Impl::Slice<Kokkos::LayoutLeft, internal_view_type::rank,
                                internal_view_type>::get(internal_view, 0);
   }
+  auto subview() const { return base_view(); }
 
   KOKKOS_INLINE_FUNCTION constexpr bool is_allocated() const {
     return internal_view.is_allocated();
@@ -1305,20 +1326,20 @@ class ScatterViewImpl<DataType, Kokkos::LayoutLeft, DeviceType, Op,
         internal_view.label());
   }
 
-  void reset(execution_space const& exec_space = execution_space()) {
+  void reset(execution_space const& exec_space = execution_space()) const {
     Kokkos::Impl::ResetDuplicates<execution_space, original_value_type, Op>(
         exec_space, internal_view.data(), internal_view.size(),
         internal_view.label());
   }
 
   template <typename DT, typename... RP>
-  void reset_except(View<DT, RP...> const& view) {
+  void reset_except(View<DT, RP...> const& view) const {
     reset_except(execution_space(), view);
   }
 
   template <typename DT, typename... RP>
   void reset_except(execution_space const& exec_space,
-                    View<DT, RP...> const& view) {
+                    View<DT, RP...> const& view) const {
     if (view.data() != internal_view.data()) {
       reset(exec_space);
       return;
@@ -1326,6 +1347,15 @@ class ScatterViewImpl<DataType, Kokkos::LayoutLeft, DeviceType, Op,
     Kokkos::Impl::ResetDuplicates<execution_space, original_value_type, Op>(
         exec_space, internal_view.data() + view.size(),
         internal_view.size() - view.size(), internal_view.label());
+  }
+
+  void accumulate(execution_space const& exec_space) const {
+    contribute_into(exec_space, base_view());
+    reset_except(exec_space, base_view());
+  }
+
+  void accumulate() const {
+    accumulate(execution_space());
   }
 
   void resize(const size_t n0 = KOKKOS_IMPL_CTOR_DEFAULT_ARG,
