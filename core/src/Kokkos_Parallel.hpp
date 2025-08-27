@@ -138,11 +138,13 @@ inline void parallel_for(const std::string& str, const ExecPolicy& policy,
 }
 
 template <Kokkos::ExecutionPolicy ExecPolicy, class FunctorType>
-inline void parallel_for(const ExecPolicy& policy, const FunctorType& functor) {
+KOKKOS_INLINE_FUNCTION void parallel_for(const ExecPolicy& policy,
+                                         const FunctorType& functor) {
   /** Enforce correct use **/
-  Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_for",
-                                                              policy);
-  Kokkos::parallel_for("", policy, functor);
+  KOKKOS_IF_ON_HOST(
+      (Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check(
+           "parallel_for", policy);
+       Kokkos::parallel_for("", policy, functor);))
 }
 
 template <class FunctorType>

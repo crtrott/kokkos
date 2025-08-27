@@ -48,6 +48,35 @@ namespace Impl {
 struct PolicyUpdate {};
 }  // namespace Impl
 
+template <class ExecType>
+concept ExecutionSpace = is_execution_space_v<ExecType>;
+template <class ExecType>
+concept TeamHandle = is_team_handle_v<ExecType>;
+
+namespace Impl {
+
+template <class ExecType>
+concept ExecutionTypeConcept = ExecutionSpace<ExecType> || TeamHandle<ExecType>;
+
+template <class... Properties>
+struct extract_execution_type {
+  using type = DefaultExecutionSpace;
+};
+
+template <class T, class... Properties>
+struct extract_execution_type<T, Properties...> {
+  using type = typename extract_execution_type<Properties...>::type;
+};
+
+template <ExecutionTypeConcept T, class... Properties>
+struct extract_execution_type<T, Properties...> {
+  using type = T;
+};
+}  // namespace Impl
+
+template <typename T, typename... Properties>
+class ImplRangePolicy;
+
 /** \brief  Execution policy for work over a range of an integral type.
  *
  * Valid template argument options:
@@ -69,8 +98,9 @@ struct PolicyUpdate {};
  *
  *  Blocking is the granularity of partitioning the range among threads.
  */
-template <class... Properties>
-class RangePolicy : public Impl::PolicyTraits<Properties...> {
+template <ExecutionSpace ExecSpace, class... Properties>
+class ImplRangePolicy<ExecSpace, Properties...>
+    : public Impl::PolicyTraits<Properties...> {
  public:
   using traits = Impl::PolicyTraits<Properties...>;
 
@@ -81,12 +111,15 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
   typename traits::index_type m_granularity;
   typename traits::index_type m_granularity_mask;
 
+  template <class T, class... OtherProperties>
+  friend class ImplRangePolicy;
+
   template <class... OtherProperties>
   friend class RangePolicy;
 
  public:
   //! Tag this class as an execution policy
-  using execution_policy = RangePolicy<Properties...>;
+  using execution_policy = ImplRangePolicy<ExecSpace, Properties...>;
   using member_type      = typename traits::index_type;
   using index_type       = typename traits::index_type;
 
@@ -104,7 +137,7 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
   void operator()(const int&) const {}
 
   template <class... OtherProperties>
-  RangePolicy(const RangePolicy<OtherProperties...>& p)
+  ImplRangePolicy(const ImplRangePolicy<OtherProperties...>& p)
       : traits(p),  // base class may contain data such as desired occupancy
         m_space(p.m_space),
         m_begin(p.m_begin),
@@ -112,7 +145,7 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
         m_granularity(p.m_granularity),
         m_granularity_mask(p.m_granularity_mask) {}
 
-  inline RangePolicy()
+  inline ImplRangePolicy()
       : m_space(),
         m_begin(0),
         m_end(0),
@@ -124,17 +157,8 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
             std::enable_if_t<(std::is_convertible_v<IndexType1, member_type> &&
                               std::is_convertible_v<IndexType2, member_type>),
                              bool> = false>
-  inline RangePolicy(const IndexType1 work_begin, const IndexType2 work_end)
-      : RangePolicy(typename traits::execution_space(), work_begin, work_end) {}
-
-  /** \brief  Total range */
-  template <typename IndexType1, typename IndexType2,
-            std::enable_if_t<(std::is_convertible_v<IndexType1, member_type> &&
-                              std::is_convertible_v<IndexType2, member_type>),
-                             bool> = false>
-  inline RangePolicy(const typename traits::execution_space& work_space,
-                     const IndexType1 work_begin, const IndexType2 work_end)
-      : m_space(work_space),
+  ImplRangePolicy(const IndexType1 work_begin, const IndexType2 work_end)
+      : m_space(typename traits::execution_space()),
         m_begin(work_begin),
         m_end(work_end),
         m_granularity(0),
@@ -145,13 +169,31 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
     set_auto_chunk_size();
   }
 
+  /** \brief  Total range */
   template <typename IndexType1, typename IndexType2,
             std::enable_if_t<(std::is_convertible_v<IndexType1, member_type> &&
                               std::is_convertible_v<IndexType2, member_type>),
                              bool> = false>
-  RangePolicy(const typename traits::execution_space& work_space,
-              const IndexType1 work_begin, const IndexType2 work_end,
-              const ChunkSize chunk_size)
+  KOKKOS_FUNCTION ImplRangePolicy(
+      const typename traits::execution_space& work_space,
+      const IndexType1 work_begin, const IndexType2 work_end)
+      : m_space(work_space),
+        m_begin(work_begin),
+        m_end(work_end),
+        m_granularity(0),
+        m_granularity_mask(0) {
+    KOKKOS_IF_ON_HOST(check_conversion_safety(work_begin);
+                      check_conversion_safety(work_end);
+                      check_bounds_validity(); set_auto_chunk_size();)
+  }
+
+  template <typename IndexType1, typename IndexType2,
+            std::enable_if_t<(std::is_convertible_v<IndexType1, member_type> &&
+                              std::is_convertible_v<IndexType2, member_type>),
+                             bool> = false>
+  ImplRangePolicy(const typename traits::execution_space& work_space,
+                  const IndexType1 work_begin, const IndexType2 work_end,
+                  const ChunkSize chunk_size)
       : m_space(work_space),
         m_begin(work_begin),
         m_end(work_end),
@@ -160,7 +202,7 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
     check_conversion_safety(work_begin);
     check_conversion_safety(work_end);
     check_bounds_validity();
-    set_chunk_size(chunk_size.value);
+    impl_set_chunk_size(chunk_size.value);
   }
 
   /** \brief  Total range */
@@ -168,14 +210,14 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
             std::enable_if_t<(std::is_convertible_v<IndexType1, member_type> &&
                               std::is_convertible_v<IndexType2, member_type>),
                              bool> = false>
-  RangePolicy(const IndexType1 work_begin, const IndexType2 work_end,
-              const ChunkSize chunk_size)
-      : RangePolicy(typename traits::execution_space(), work_begin, work_end,
-                    chunk_size) {}
+  ImplRangePolicy(const IndexType1 work_begin, const IndexType2 work_end,
+                  const ChunkSize chunk_size)
+      : ImplRangePolicy(typename traits::execution_space(), work_begin,
+                        work_end, chunk_size) {}
 
-  RangePolicy(const Impl::PolicyUpdate, const RangePolicy& other,
-              typename traits::execution_space space)
-      : RangePolicy(other) {
+  ImplRangePolicy(const Impl::PolicyUpdate, const ImplRangePolicy& other,
+                  typename traits::execution_space space)
+      : ImplRangePolicy(other) {
     this->m_space = std::move(space);
   }
 
@@ -192,14 +234,14 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
   /** \brief return chunk_size */
   inline member_type chunk_size() const { return m_granularity; }
 
+ private:
   /** \brief set chunk_size to a discrete value*/
-  inline RangePolicy& set_chunk_size(int chunk_size) {
+  inline void impl_set_chunk_size(int chunk_size) {
     m_granularity      = chunk_size;
     m_granularity_mask = m_granularity - 1;
-    return *this;
+    return;
   }
 
- private:
   /** \brief finalize chunk_size if it was set to AUTO*/
   inline void set_auto_chunk_size() {
 #ifdef KOKKOS_ENABLE_SYCL
@@ -313,8 +355,10 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
    *  Typically used to partition a range over a group of threads.
    */
   struct WorkRange {
-    using work_tag    = typename RangePolicy<Properties...>::work_tag;
-    using member_type = typename RangePolicy<Properties...>::member_type;
+    using work_tag =
+        typename ImplRangePolicy<ExecSpace, Properties...>::work_tag;
+    using member_type =
+        typename ImplRangePolicy<ExecSpace, Properties...>::member_type;
 
     KOKKOS_INLINE_FUNCTION member_type begin() const { return m_begin; }
     KOKKOS_INLINE_FUNCTION member_type end() const { return m_end; }
@@ -324,7 +368,7 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
      *  Typically used to partition a range over a group of threads.
      */
     KOKKOS_INLINE_FUNCTION
-    WorkRange(const RangePolicy& range, const int part_rank,
+    WorkRange(const ImplRangePolicy& range, const int part_rank,
               const int part_size)
         : m_begin(0), m_end(0) {
       if (part_size) {
@@ -349,21 +393,6 @@ class RangePolicy : public Impl::PolicyTraits<Properties...> {
     WorkRange& operator=(const WorkRange&);
   };
 };
-
-RangePolicy() -> RangePolicy<>;
-
-RangePolicy(int64_t, int64_t) -> RangePolicy<>;
-RangePolicy(int64_t, int64_t, ChunkSize const&) -> RangePolicy<>;
-
-RangePolicy(DefaultExecutionSpace const&, int64_t, int64_t) -> RangePolicy<>;
-RangePolicy(DefaultExecutionSpace const&, int64_t, int64_t, ChunkSize const&)
-    -> RangePolicy<>;
-
-template <typename ES, typename = std::enable_if_t<is_execution_space_v<ES>>>
-RangePolicy(ES const&, int64_t, int64_t) -> RangePolicy<ES>;
-
-template <typename ES, typename = std::enable_if_t<is_execution_space_v<ES>>>
-RangePolicy(ES const&, int64_t, int64_t, ChunkSize const&) -> RangePolicy<ES>;
 
 }  // namespace Kokkos
 
@@ -840,50 +869,17 @@ struct TeamThreadRangeBoundariesStruct {
         member(arg_thread) {}
 };
 
+// For some backends, vector length is required to be 1 (currently Serial, HPX
+// and Threads), so there is no need for a TeamVectorRangeBoundariesStruct
+// distinct from TeamThreadRangeBoundariesStruct for the base implementation.
+// Backends with non-trivial vector length are responsible for implementing
+// TeamVectorRangeBoundariesStruct for their specific TeamMemberType.
+
 template <typename iType, class TeamMemberType>
-struct TeamVectorRangeBoundariesStruct {
- private:
-  KOKKOS_INLINE_FUNCTION static iType ibegin(const iType& arg_begin,
-                                             const iType& arg_end,
-                                             const iType& arg_rank,
-                                             const iType& arg_size) {
-    return arg_begin +
-           ((arg_end - arg_begin + arg_size - 1) / arg_size) * arg_rank;
-  }
-
-  KOKKOS_INLINE_FUNCTION static iType iend(const iType& arg_begin,
-                                           const iType& arg_end,
-                                           const iType& arg_rank,
-                                           const iType& arg_size) {
-    const iType end_ =
-        arg_begin +
-        ((arg_end - arg_begin + arg_size - 1) / arg_size) * (arg_rank + 1);
-    return end_ < arg_end ? end_ : arg_end;
-  }
-
- public:
-  using index_type = iType;
-  const iType start;
-  const iType end;
-  enum { increment = 1 };
-  const TeamMemberType& member;
-
-  KOKKOS_INLINE_FUNCTION
-  TeamVectorRangeBoundariesStruct(const TeamMemberType& arg_thread,
-                                  const iType& arg_count)
-      : start(ibegin(0, arg_count, arg_thread.team_rank(),
-                     arg_thread.team_size())),
-        end(iend(0, arg_count, arg_thread.team_rank(), arg_thread.team_size())),
-        member(arg_thread) {}
-
-  KOKKOS_INLINE_FUNCTION
-  TeamVectorRangeBoundariesStruct(const TeamMemberType& arg_thread,
-                                  const iType& arg_begin, const iType& arg_end)
-      : start(ibegin(arg_begin, arg_end, arg_thread.team_rank(),
-                     arg_thread.team_size())),
-        end(iend(arg_begin, arg_end, arg_thread.team_rank(),
-                 arg_thread.team_size())),
-        member(arg_thread) {}
+struct TeamVectorRangeBoundariesStruct
+    : public TeamThreadRangeBoundariesStruct<iType, TeamMemberType> {
+  using base_t = TeamThreadRangeBoundariesStruct<iType, TeamMemberType>;
+  using base_t::base_t;
 };
 
 template <typename iType, class TeamMemberType>
@@ -958,7 +954,7 @@ TeamThreadRange(const TeamMemberType&, const iType1& begin,
  */
 template <typename iType, class TeamMemberType, class _never_use_this_overload>
 KOKKOS_INLINE_FUNCTION_DELETED
-    Impl::TeamThreadRangeBoundariesStruct<iType, TeamMemberType>
+    Impl::TeamVectorRangeBoundariesStruct<iType, TeamMemberType>
     TeamVectorRange(const TeamMemberType&, const iType& count) = delete;
 
 /** \brief  Execution policy for parallel work over a threads within a team.
@@ -970,7 +966,7 @@ KOKKOS_INLINE_FUNCTION_DELETED
  */
 template <typename iType1, typename iType2, class TeamMemberType,
           class _never_use_this_overload>
-KOKKOS_INLINE_FUNCTION_DELETED Impl::TeamThreadRangeBoundariesStruct<
+KOKKOS_INLINE_FUNCTION_DELETED Impl::TeamVectorRangeBoundariesStruct<
     std::common_type_t<iType1, iType2>, TeamMemberType>
 TeamVectorRange(const TeamMemberType&, const iType1& begin,
                 const iType2& end) = delete;
@@ -1321,4 +1317,76 @@ struct PatternTagFromImplSpecialization<ParallelScan<Args...>>
 }  // end namespace Impl
 
 }  // namespace Kokkos
+
+namespace Kokkos {
+
+/** \brief  Partial Specialization of RangePolicy<TeamHandle>
+ *
+ *  Insert description of ExecSpace vs. TeamHandle vs. Default
+ */
+template <TeamHandle Handle, class... Properties>
+class ImplRangePolicy<Handle, Properties...>
+    : public Impl::TeamVectorRangeBoundariesStruct<int64_t, Handle> {
+ public:
+  using team_vector_range_t =
+      typename Impl::TeamVectorRangeBoundariesStruct<int64_t, Handle>;
+  using team_vector_range_t::team_vector_range_t;
+};
+
+/** \brief  Execution policy for a simple range of numbers
+ *
+ *  Insert description of ExecSpace vs. TeamHandle vs. Default
+ */
+template <typename... Properties>
+class RangePolicy
+    : public ImplRangePolicy<
+          typename Impl::extract_execution_type<Properties...>::type,
+          Properties...> {
+ public:
+  using execution_type =
+      typename Impl::extract_execution_type<Properties...>::type;
+  using base_t = ImplRangePolicy<execution_type, Properties...>;
+  using base_t::base_t;
+
+  /** \brief  set chunk_size to a discrete value and return the policy
+   *
+   *  This function requires the execution type be an execution space.
+   */
+  inline RangePolicy& set_chunk_size(int chunk_size)
+    requires ExecutionSpace<execution_type>
+  {
+    static_cast<base_t*>(this)->impl_set_chunk_size(chunk_size);
+    return *this;
+  }
+};
+
+// Deduction guide
+
+// Instances for the execution space specialization
+RangePolicy() -> RangePolicy<DefaultExecutionSpace>;
+RangePolicy(int64_t, int64_t) -> RangePolicy<DefaultExecutionSpace>;
+RangePolicy(int64_t, int64_t, ChunkSize const&)
+    -> RangePolicy<DefaultExecutionSpace>;
+RangePolicy(DefaultExecutionSpace const&, int64_t, int64_t, ChunkSize const&)
+    -> RangePolicy<DefaultExecutionSpace>;
+template <Impl::ExecutionTypeConcept Exec>
+RangePolicy(const Exec&, int64_t, int64_t, ChunkSize const&)
+    -> RangePolicy<Exec>;
+
+// Instances for the team handle specialization.
+// Must be callable on device.
+template <Impl::ExecutionTypeConcept Exec>
+KOKKOS_DEDUCTION_GUIDE RangePolicy(const Exec&, int64_t) -> RangePolicy<Exec>;
+
+// Instances for both execution space and team handle specializations.
+// Must be callable on device.
+KOKKOS_DEDUCTION_GUIDE RangePolicy(DefaultExecutionSpace const&, int64_t,
+                                   int64_t)
+    -> RangePolicy<DefaultExecutionSpace>;
+template <Impl::ExecutionTypeConcept Exec>
+KOKKOS_DEDUCTION_GUIDE RangePolicy(const Exec&, int64_t, int64_t)
+    -> RangePolicy<Exec>;
+
+}  // namespace Kokkos
+
 #endif /* #define KOKKOS_EXECPOLICY_HPP */

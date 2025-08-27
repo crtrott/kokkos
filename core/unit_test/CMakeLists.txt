@@ -194,6 +194,7 @@ foreach(Tag Threads;Serial;OpenMP;Cuda;HPX;OpenMPTarget;OpenACC;HIP;SYCL)
         Reducers_e
         Reductions
         Reductions_DeviceView
+        SelfSimilarRangePolicy
         SharedAlloc
         SpaceAwareAccessorAccessViolation
         SpaceAwareAccessor
