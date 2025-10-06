@@ -48,6 +48,8 @@ namespace Impl {
 struct PolicyUpdate {};
 }  // namespace Impl
 
+// FIXME: Remove in favor of definitions in Kokkos_Concepts.hpp once
+// https://github.com/kokkos/kokkos/pull/8494 is merged
 template <class ExecType>
 concept ExecutionSpace = is_execution_space_v<ExecType>;
 template <class ExecType>
@@ -78,6 +80,8 @@ template <typename T, typename... Properties>
 class ImplRangePolicy;
 
 /** \brief  Execution policy for work over a range of an integral type.
+ *
+ * FIXME: update or move with info about partial specialization
  *
  * Valid template argument options:
  *
@@ -1322,7 +1326,7 @@ namespace Kokkos {
 
 /** \brief  Partial Specialization of RangePolicy<TeamHandle>
  *
- *  Insert description of ExecSpace vs. TeamHandle vs. Default
+ *  FIXME: Insert description of ExecSpace vs. TeamHandle vs. Default
  */
 template <TeamHandle Handle, class... Properties>
 class ImplRangePolicy<Handle, Properties...>
@@ -1335,7 +1339,7 @@ class ImplRangePolicy<Handle, Properties...>
 
 /** \brief  Execution policy for a simple range of numbers
  *
- *  Insert description of ExecSpace vs. TeamHandle vs. Default
+ *  FIXME: Insert description of ExecSpace vs. TeamHandle vs. Default
  */
 template <typename... Properties>
 class RangePolicy
