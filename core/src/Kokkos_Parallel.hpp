@@ -145,6 +145,7 @@ KOKKOS_INLINE_FUNCTION void parallel_for(const ExecPolicy& policy,
       (Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check(
            "parallel_for", policy);
        Kokkos::parallel_for("", policy, functor);))
+  KOKKOS_IF_ON_DEVICE(((void)policy; (void)functor;))
 }
 
 template <class FunctorType>
