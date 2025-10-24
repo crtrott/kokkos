@@ -4,6 +4,73 @@
 #include <Kokkos_Core.hpp>
 
 namespace Test {
+template <class Policy, class ExpectedExecType, class ExpectedIndex>
+constexpr bool check_compile_time_inputs() {
+  static_assert(
+      std::same_as<typename Policy::execution_type, ExpectedExecType>);
+  static_assert(std::same_as<typename Policy::index_type, ExpectedIndex>);
+  return true;
+}
+
+using TeamPolicy = Kokkos::TeamPolicy<>;
+using TeamHandle = TeamPolicy::member_type;
+
+using DefaultIndex    = typename TeamHandle::execution_space::size_type;
+using LongIndex       = Kokkos::IndexType<long>;
+using DynamicSchedule = Kokkos::Schedule<Kokkos::Dynamic>;
+struct SomeTag {};
+
+// clang-format off
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle                                           >, TeamHandle, DefaultIndex>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle                                           >, TeamHandle, DefaultIndex>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule                          >, TeamHandle, DefaultIndex>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, SomeTag                 >, TeamHandle, DefaultIndex>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex                                >, TeamHandle, long>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, LongIndex               >, TeamHandle, long>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex,       DynamicSchedule         >, TeamHandle, long>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex,       DynamicSchedule, SomeTag>, TeamHandle, long>());
+static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, LongIndex,       SomeTag>, TeamHandle, long>());
+// clang-format on
+
+template <class ExecType, class IndexType>
+KOKKOS_INLINE_FUNCTION int check_runtime_inputs(
+    const ExecType& exec, const IndexType beg, const IndexType end,
+    const IndexType chunk_size = 0) {
+  auto p    = Kokkos::RangePolicy(exec, beg, end);
+  int nerrs = 0;
+
+  if (p.begin() != beg) ++nerrs;
+  if (p.end() != end) ++nerrs;
+
+  auto p2 = p.set_chunk_size(chunk_size);
+  if constexpr (Kokkos::ExecutionSpace<ExecType>)
+    if (p2.chunk_size() != chunk_size) ++nerrs;
+
+  return nerrs;
+}
+
+void test_self_similar_range_policy_runtime() {
+  using ExecSpace = Kokkos::DefaultExecutionSpace;
+  using IndexType = ExecSpace::size_type;
+
+  IndexType beg        = 5;
+  IndexType end        = 15;
+  IndexType chunk_size = 10;
+
+  auto nerrs_exec_space =
+      check_runtime_inputs(ExecSpace(), beg, end, chunk_size);
+  ASSERT_EQ(nerrs_exec_space, 0);
+
+  int nerrs_team_handle;
+  using team_t = typename Kokkos::TeamPolicy<>::member_type;
+  Kokkos::parallel_reduce(
+      "check_runtime", Kokkos::TeamPolicy(1, Kokkos::AUTO()),
+      KOKKOS_LAMBDA(const team_t& team, int& nerrs) {
+        nerrs = check_runtime_inputs(team, beg, end);
+      },
+      nerrs_team_handle);
+  ASSERT_EQ(nerrs_team_handle, 0);
+}
 
 template <class Exec, class X, class Y>
 KOKKOS_INLINE_FUNCTION void sum_views(const Exec& exec, const X& x,
@@ -13,7 +80,7 @@ KOKKOS_INLINE_FUNCTION void sum_views(const Exec& exec, const X& x,
       policy, KOKKOS_LAMBDA(const int& i) { x(i) += y(i); });
 }
 
-void test_self_similar_range() {
+void test_self_similar_range_policy_computation() {
   int N         = 7;
   int num_teams = 5;
 
@@ -51,6 +118,12 @@ void test_self_similar_range() {
   ASSERT_EQ(result, size_t(3) * M_x.extent(0) * M_x.extent(1));
 }
 
-TEST(TEST_CATEGORY, self_similar_range_policy) { test_self_similar_range(); }
+TEST(TEST_CATEGORY, self_similar_range_policy_runtime) {
+  test_self_similar_range_policy_runtime();
+}
+
+TEST(TEST_CATEGORY, self_similar_range_policy_computation) {
+  test_self_similar_range_policy_computation();
+}
 
 }  // namespace Test

@@ -127,12 +127,6 @@ class ImplRangePolicy<ExecSpace, Properties...>
   using member_type      = typename traits::index_type;
   using index_type       = typename traits::index_type;
 
-  KOKKOS_INLINE_FUNCTION const typename traits::execution_space& space() const {
-    return m_space;
-  }
-  KOKKOS_INLINE_FUNCTION member_type begin() const { return m_begin; }
-  KOKKOS_INLINE_FUNCTION member_type end() const { return m_end; }
-
   // TODO: find a better workaround for Clangs weird instantiation order
   // This thing is here because of an instantiation error, where the RangePolicy
   // is inserted into FunctorValue Traits, which tries decltype on the operator.
@@ -170,7 +164,7 @@ class ImplRangePolicy<ExecSpace, Properties...>
     check_conversion_safety(work_begin);
     check_conversion_safety(work_end);
     check_bounds_validity();
-    set_auto_chunk_size();
+    impl_set_auto_chunk_size();
   }
 
   /** \brief  Total range */
@@ -188,7 +182,7 @@ class ImplRangePolicy<ExecSpace, Properties...>
         m_granularity_mask(0) {
     KOKKOS_IF_ON_HOST(check_conversion_safety(work_begin);
                       check_conversion_safety(work_end);
-                      check_bounds_validity(); set_auto_chunk_size();)
+                      check_bounds_validity(); impl_set_auto_chunk_size();)
   }
 
   template <typename IndexType1, typename IndexType2,
@@ -234,11 +228,19 @@ class ImplRangePolicy<ExecSpace, Properties...>
   }
 #endif
 
- public:
-  /** \brief return chunk_size */
-  inline member_type chunk_size() const { return m_granularity; }
-
  private:
+  KOKKOS_INLINE_FUNCTION const typename traits::execution_space& impl_space()
+      const {
+    return m_space;
+  }
+  KOKKOS_INLINE_FUNCTION member_type impl_begin() const { return m_begin; }
+  KOKKOS_INLINE_FUNCTION member_type impl_end() const { return m_end; }
+
+  /** \brief return chunk_size */
+  KOKKOS_INLINE_FUNCTION member_type impl_chunk_size() const {
+    return m_granularity;
+  }
+
   /** \brief set chunk_size to a discrete value*/
   inline void impl_set_chunk_size(int chunk_size) {
     m_granularity      = chunk_size;
@@ -247,7 +249,7 @@ class ImplRangePolicy<ExecSpace, Properties...>
   }
 
   /** \brief finalize chunk_size if it was set to AUTO*/
-  inline void set_auto_chunk_size() {
+  inline void impl_set_auto_chunk_size() {
 #ifdef KOKKOS_ENABLE_SYCL
     if (std::is_same_v<typename traits::execution_space, Kokkos::SYCL>) {
       // chunk_size <=1 lets the compiler choose the workgroup size when
@@ -378,15 +380,16 @@ class ImplRangePolicy<ExecSpace, Properties...>
       if (part_size) {
         // Split evenly among partitions, then round up to the granularity.
         const member_type work_part =
-            ((((range.end() - range.begin()) + (part_size - 1)) / part_size) +
+            ((((range.impl_end() - range.impl_begin()) + (part_size - 1)) /
+              part_size) +
              range.m_granularity_mask) &
             ~member_type(range.m_granularity_mask);
 
-        m_begin = range.begin() + work_part * part_rank;
+        m_begin = range.impl_begin() + work_part * part_rank;
         m_end   = m_begin + work_part;
 
-        if (range.end() < m_begin) m_begin = range.end();
-        if (range.end() < m_end) m_end = range.end();
+        if (range.impl_end() < m_begin) m_begin = range.impl_end();
+        if (range.impl_end() < m_end) m_end = range.impl_end();
       }
     }
 
@@ -1324,17 +1327,61 @@ struct PatternTagFromImplSpecialization<ParallelScan<Args...>>
 
 namespace Kokkos {
 
+namespace Impl {
+template <class T>
+concept IndexTypeConcept = requires { typename T::type; } &&
+                           std::same_as<T, Kokkos::IndexType<typename T::type>>;
+
+template <TeamHandle Handle, class... Properties>
+struct extract_index_type {
+  using type = typename Handle::execution_space::size_type;
+};
+
+template <TeamHandle Handle, class T, class... Properties>
+struct extract_index_type<Handle, T, Properties...> {
+  using type = typename extract_index_type<Handle, Properties...>::type;
+};
+
+template <TeamHandle Handle, IndexTypeConcept T, class... Properties>
+struct extract_index_type<Handle, T, Properties...> {
+  using type = T::type;
+};
+}  // namespace Impl
+
 /** \brief  Partial Specialization of RangePolicy<TeamHandle>
  *
  *  FIXME: Insert description of ExecSpace vs. TeamHandle vs. Default
  */
 template <TeamHandle Handle, class... Properties>
 class ImplRangePolicy<Handle, Properties...>
-    : public Impl::TeamVectorRangeBoundariesStruct<int64_t, Handle> {
+    : public Impl::TeamVectorRangeBoundariesStruct<
+          typename Impl::extract_index_type<Handle, Properties...>::type,
+          Handle> {
  public:
-  using team_vector_range_t =
-      typename Impl::TeamVectorRangeBoundariesStruct<int64_t, Handle>;
-  using team_vector_range_t::team_vector_range_t;
+  using index_type =
+      typename Impl::extract_index_type<Handle, Properties...>::type;
+  using base_t =
+      typename Impl::TeamVectorRangeBoundariesStruct<index_type, Handle>;
+  using base_t::base_t;
+
+  using member_type = index_type;
+
+  KOKKOS_INLINE_FUNCTION const Handle& impl_space() const {
+    return static_cast<const base_t*>(this)->member;
+  }
+
+  KOKKOS_INLINE_FUNCTION member_type impl_begin() const {
+    return static_cast<const base_t*>(this)->start;
+  }
+  KOKKOS_INLINE_FUNCTION member_type impl_end() const {
+    return static_cast<const base_t*>(this)->end;
+  }
+
+  KOKKOS_INLINE_FUNCTION member_type impl_chunk_size() const {
+    Kokkos::abort(
+        "Chunk size is not implemented for Kokkos::RangePolicy<TeamHandle>.");
+    return member_type();
+  }
 };
 
 /** \brief  Execution policy for a simple range of numbers
@@ -1352,14 +1399,25 @@ class RangePolicy
   using base_t = ImplRangePolicy<execution_type, Properties...>;
   using base_t::base_t;
 
-  /** \brief  set chunk_size to a discrete value and return the policy
-   *
-   *  This function requires the execution type be an execution space.
-   */
-  inline RangePolicy& set_chunk_size(int chunk_size)
-    requires ExecutionSpace<execution_type>
-  {
-    static_cast<base_t*>(this)->impl_set_chunk_size(chunk_size);
+  KOKKOS_INLINE_FUNCTION execution_type space() const {
+    return static_cast<const base_t*>(this)->impl_space();
+  }
+
+  KOKKOS_INLINE_FUNCTION base_t::member_type begin() const {
+    return static_cast<const base_t*>(this)->impl_begin();
+  }
+  KOKKOS_INLINE_FUNCTION base_t::member_type end() const {
+    return static_cast<const base_t*>(this)->impl_end();
+  }
+
+  KOKKOS_INLINE_FUNCTION base_t::member_type chunk_size() const {
+    return static_cast<const base_t*>(this)->impl_chunk_size();
+  }
+
+  KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(int chunk_size) {
+    KOKKOS_IF_ON_HOST((
+        if constexpr (ExecutionSpace<execution_type>) static_cast<base_t*>(this)
+            ->impl_set_chunk_size(chunk_size);))
     return *this;
   }
 };
@@ -1371,22 +1429,12 @@ RangePolicy() -> RangePolicy<DefaultExecutionSpace>;
 RangePolicy(int64_t, int64_t) -> RangePolicy<DefaultExecutionSpace>;
 RangePolicy(int64_t, int64_t, ChunkSize const&)
     -> RangePolicy<DefaultExecutionSpace>;
-RangePolicy(DefaultExecutionSpace const&, int64_t, int64_t, ChunkSize const&)
-    -> RangePolicy<DefaultExecutionSpace>;
 template <Impl::ExecutionTypeConcept Exec>
 RangePolicy(const Exec&, int64_t, int64_t, ChunkSize const&)
     -> RangePolicy<Exec>;
 
-// Instances for the team handle specialization.
-// Must be callable on device.
-template <Impl::ExecutionTypeConcept Exec>
-KOKKOS_DEDUCTION_GUIDE RangePolicy(const Exec&, int64_t) -> RangePolicy<Exec>;
-
 // Instances for both execution space and team handle specializations.
 // Must be callable on device.
-KOKKOS_DEDUCTION_GUIDE RangePolicy(DefaultExecutionSpace const&, int64_t,
-                                   int64_t)
-    -> RangePolicy<DefaultExecutionSpace>;
 template <Impl::ExecutionTypeConcept Exec>
 KOKKOS_DEDUCTION_GUIDE RangePolicy(const Exec&, int64_t, int64_t)
     -> RangePolicy<Exec>;
