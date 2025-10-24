@@ -140,12 +140,16 @@ inline void parallel_for(const std::string& str, const ExecPolicy& policy,
 template <Kokkos::ExecutionPolicy ExecPolicy, class FunctorType>
 KOKKOS_INLINE_FUNCTION void parallel_for(const ExecPolicy& policy,
                                          const FunctorType& functor) {
+  KOKKOS_IF_ON_DEVICE(
+      Kokkos::abort("Kokkos::parallel_for(ExecutionPolicy, functor) cannot be "
+                    "called from device.\n");)
+
+#pragma nv_diag_suppress 20011, 20013, 20014, 20015
   /** Enforce correct use **/
-  KOKKOS_IF_ON_HOST(
-      (Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check(
-           "parallel_for", policy);
-       Kokkos::parallel_for("", policy, functor);))
-  KOKKOS_IF_ON_DEVICE(((void)policy; (void)functor;))
+  Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_for",
+                                                              policy);
+  Kokkos::parallel_for("", policy, functor);
+#pragma nv_diag_default 20011, 20013, 20014, 20015
 }
 
 template <class FunctorType>
