@@ -48,13 +48,6 @@ namespace Impl {
 struct PolicyUpdate {};
 }  // namespace Impl
 
-// FIXME: Remove in favor of definitions in Kokkos_Concepts.hpp once
-// https://github.com/kokkos/kokkos/pull/8494 is merged
-template <class ExecType>
-concept ExecutionSpace = is_execution_space_v<ExecType>;
-template <class ExecType>
-concept TeamHandle = is_team_handle_v<ExecType>;
-
 namespace Impl {
 
 template <class ExecType>
