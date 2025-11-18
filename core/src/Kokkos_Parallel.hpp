@@ -144,12 +144,15 @@ KOKKOS_INLINE_FUNCTION void parallel_for(const ExecPolicy& policy,
       Kokkos::abort("Kokkos::parallel_for(ExecutionPolicy, functor) cannot be "
                     "called from device.\n");)
 
-#pragma nv_diag_suppress 20011, 20013, 20014, 20015
+  // Work around nvcc complaint about calling __host__ function from __host__
+  // __device__ function. Assert above that we are not actually calling on
+  // device.
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH()
   /** Enforce correct use **/
   Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_for",
                                                               policy);
   Kokkos::parallel_for("", policy, functor);
-#pragma nv_diag_default 20011, 20013, 20014, 20015
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP()
 }
 
 template <class FunctorType>

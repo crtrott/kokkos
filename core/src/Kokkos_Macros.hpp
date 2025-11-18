@@ -639,6 +639,22 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_PUSH()
 #define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_POP()
 #endif
+
+#if defined(__NVCOMPILER)
+#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH() \
+  _Pragma("diag_suppress 20011")          \
+  _Pragma("diag_suppress 20013")          \
+  _Pragma("diag_suppress 20014")          \
+  _Pragma("diag_suppress 20015")
+#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP() \
+  _Pragma("diag_default 20011")          \
+  _Pragma("diag_default 20013")          \
+  _Pragma("diag_default 20014")          \
+  _Pragma("diag_default 20015")
+#else
+#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH()
+#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP()
+#endif
 // clang-format on
 
 #ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
