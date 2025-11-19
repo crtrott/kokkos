@@ -646,7 +646,7 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP() \
   _Pragma("nv_diag_default 20011, 20013, 20014, 20015")
 #else
-#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH() \
+#define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH()
 #define KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP()
 #endif
 // clang-format on
