@@ -145,8 +145,13 @@ class Cuda {
 
   Cuda(const Cuda&)            = default;
   Cuda& operator=(const Cuda&) = default;
-  ~Cuda();
   Cuda();
+
+  // This destructor is never actually called on device, but, for the implicitly
+  // defined ~RangePolicy<ExecSpace>(), we need destructor to be __host__
+  // __device__ to avoid nvcc warnings. This destructor will only execute
+  // internals on host (see implementation)
+  KOKKOS_FUNCTION ~Cuda();
 
   explicit Cuda(cudaStream_t stream) : Cuda(stream, Impl::ManageStream::no) {}
 
