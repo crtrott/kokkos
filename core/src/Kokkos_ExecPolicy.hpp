@@ -1422,12 +1422,17 @@ RangePolicy() -> RangePolicy<DefaultExecutionSpace>;
 RangePolicy(int64_t, int64_t) -> RangePolicy<DefaultExecutionSpace>;
 RangePolicy(int64_t, int64_t, ChunkSize const&)
     -> RangePolicy<DefaultExecutionSpace>;
+RangePolicy(const DefaultExecutionSpace&, int64_t, int64_t, ChunkSize const&)
+    -> RangePolicy<DefaultExecutionSpace>;
 template <Impl::ExecutionTypeConcept Exec>
 RangePolicy(const Exec&, int64_t, int64_t, ChunkSize const&)
     -> RangePolicy<Exec>;
 
 // Instances for both execution space and team handle specializations.
 // Must be callable on device.
+KOKKOS_DEDUCTION_GUIDE RangePolicy(const DefaultExecutionSpace&, int64_t,
+                                   int64_t)
+    -> RangePolicy<DefaultExecutionSpace>;
 template <Impl::ExecutionTypeConcept Exec>
 KOKKOS_DEDUCTION_GUIDE RangePolicy(const Exec&, int64_t, int64_t)
     -> RangePolicy<Exec>;
