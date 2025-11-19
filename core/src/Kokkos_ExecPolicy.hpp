@@ -120,6 +120,16 @@ class ImplRangePolicy<ExecSpace, Properties...>
   using member_type      = typename traits::index_type;
   using index_type       = typename traits::index_type;
 
+  KOKKOS_INLINE_FUNCTION const typename traits::execution_space& space() const {
+    return m_space;
+  }
+  KOKKOS_INLINE_FUNCTION member_type begin() const { return m_begin; }
+  KOKKOS_INLINE_FUNCTION member_type end() const { return m_end; }
+
+  KOKKOS_INLINE_FUNCTION member_type chunk_size() const {
+    return m_granularity;
+  }
+
   // TODO: find a better workaround for Clangs weird instantiation order
   // This thing is here because of an instantiation error, where the RangePolicy
   // is inserted into FunctorValue Traits, which tries decltype on the operator.
@@ -222,18 +232,6 @@ class ImplRangePolicy<ExecSpace, Properties...>
 #endif
 
  private:
-  KOKKOS_INLINE_FUNCTION const typename traits::execution_space& impl_space()
-      const {
-    return m_space;
-  }
-  KOKKOS_INLINE_FUNCTION member_type impl_begin() const { return m_begin; }
-  KOKKOS_INLINE_FUNCTION member_type impl_end() const { return m_end; }
-
-  /** \brief return chunk_size */
-  KOKKOS_INLINE_FUNCTION member_type impl_chunk_size() const {
-    return m_granularity;
-  }
-
   /** \brief set chunk_size to a discrete value*/
   inline void impl_set_chunk_size(int chunk_size) {
     m_granularity      = chunk_size;
@@ -373,16 +371,15 @@ class ImplRangePolicy<ExecSpace, Properties...>
       if (part_size) {
         // Split evenly among partitions, then round up to the granularity.
         const member_type work_part =
-            ((((range.impl_end() - range.impl_begin()) + (part_size - 1)) /
-              part_size) +
+            ((((range.end() - range.begin()) + (part_size - 1)) / part_size) +
              range.m_granularity_mask) &
             ~member_type(range.m_granularity_mask);
 
-        m_begin = range.impl_begin() + work_part * part_rank;
+        m_begin = range.begin() + work_part * part_rank;
         m_end   = m_begin + work_part;
 
-        if (range.impl_end() < m_begin) m_begin = range.impl_end();
-        if (range.impl_end() < m_end) m_end = range.impl_end();
+        if (range.end() < m_begin) m_begin = range.end();
+        if (range.end() < m_end) m_end = range.end();
       }
     }
 
@@ -1359,18 +1356,18 @@ class ImplRangePolicy<Handle, Properties...>
 
   using member_type = index_type;
 
-  KOKKOS_INLINE_FUNCTION const Handle& impl_space() const {
+  KOKKOS_INLINE_FUNCTION const Handle& team_member() const {
     return static_cast<const base_t*>(this)->member;
   }
 
-  KOKKOS_INLINE_FUNCTION member_type impl_begin() const {
+  KOKKOS_INLINE_FUNCTION member_type begin() const {
     return static_cast<const base_t*>(this)->start;
   }
-  KOKKOS_INLINE_FUNCTION member_type impl_end() const {
+  KOKKOS_INLINE_FUNCTION member_type end() const {
     return static_cast<const base_t*>(this)->end;
   }
 
-  KOKKOS_INLINE_FUNCTION member_type impl_chunk_size() const {
+  KOKKOS_INLINE_FUNCTION member_type chunk_size() const {
     Kokkos::abort(
         "Chunk size is not implemented for Kokkos::RangePolicy<TeamHandle>.");
     return member_type();
@@ -1392,26 +1389,12 @@ class RangePolicy
   using base_t = ImplRangePolicy<execution_type, Properties...>;
   using base_t::base_t;
 
-  KOKKOS_INLINE_FUNCTION execution_type space() const {
-    return static_cast<const base_t*>(this)->impl_space();
-  }
-
-  KOKKOS_INLINE_FUNCTION base_t::member_type begin() const {
-    return static_cast<const base_t*>(this)->impl_begin();
-  }
-  KOKKOS_INLINE_FUNCTION base_t::member_type end() const {
-    return static_cast<const base_t*>(this)->impl_end();
-  }
-
-  KOKKOS_INLINE_FUNCTION base_t::member_type chunk_size() const {
-    return static_cast<const base_t*>(this)->impl_chunk_size();
-  }
-
   KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(
       [[maybe_unused]] int chunk_size) {
-    KOKKOS_IF_ON_HOST((
-        if constexpr (ExecutionSpace<execution_type>) static_cast<base_t*>(this)
-            ->impl_set_chunk_size(chunk_size);))
+    if constexpr (ExecutionSpace<execution_type>) {
+      KOKKOS_IF_ON_HOST(
+          static_cast<base_t*>(this)->impl_set_chunk_size(chunk_size);)
+    }
     return *this;
   }
 };
