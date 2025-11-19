@@ -1407,7 +1407,8 @@ class RangePolicy
     return static_cast<const base_t*>(this)->impl_chunk_size();
   }
 
-  KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(int chunk_size) {
+  KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(
+      [[maybe_unused]] int chunk_size) {
     KOKKOS_IF_ON_HOST((
         if constexpr (ExecutionSpace<execution_type>) static_cast<base_t*>(this)
             ->impl_set_chunk_size(chunk_size);))
