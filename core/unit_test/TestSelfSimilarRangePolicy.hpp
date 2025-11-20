@@ -32,33 +32,34 @@ static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongInde
 static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, LongIndex,       SomeTag>, TeamHandle, long>());
 // clang-format on
 
-template <class ExecType, class IndexType>
+template <class Policy>
 KOKKOS_INLINE_FUNCTION int check_runtime_inputs(
-    const ExecType& exec, const IndexType beg, const IndexType end,
-    const IndexType chunk_size = 0) {
-  auto p    = Kokkos::RangePolicy(exec, beg, end);
+    Policy& p, const typename Policy::index_type expected_begin,
+    const typename Policy::index_type expected_end,
+    const typename Policy::index_type chunk_size = 0) {
   int nerrs = 0;
 
-  if (p.begin() != beg) ++nerrs;
-  if (p.end() != end) ++nerrs;
+  if (p.begin() != expected_begin) ++nerrs;
+  if (p.end() != expected_end) ++nerrs;
 
   auto p2 = p.set_chunk_size(chunk_size);
-  if constexpr (Kokkos::ExecutionSpace<ExecType>)
+  if constexpr (Kokkos::ExecutionSpace<typename Policy::execution_type>)
     if (p2.chunk_size() != chunk_size) ++nerrs;
 
   return nerrs;
 }
 
 void test_self_similar_range_policy_runtime() {
-  using ExecSpace = Kokkos::DefaultExecutionSpace;
-  using IndexType = ExecSpace::size_type;
+  using IndexType = typename Kokkos::DefaultExecutionSpace::size_type;
 
   IndexType beg        = 5;
   IndexType end        = 15;
   IndexType chunk_size = 10;
 
+  auto p_execspace =
+      Kokkos::RangePolicy(Kokkos::DefaultExecutionSpace(), beg, end);
   auto nerrs_exec_space =
-      check_runtime_inputs(ExecSpace(), beg, end, chunk_size);
+      check_runtime_inputs(p_execspace, beg, end, chunk_size);
   ASSERT_EQ(nerrs_exec_space, 0);
 
   int nerrs_team_handle;
@@ -66,7 +67,9 @@ void test_self_similar_range_policy_runtime() {
   Kokkos::parallel_reduce(
       "check_runtime", Kokkos::TeamPolicy(1, Kokkos::AUTO()),
       KOKKOS_LAMBDA(const team_t& team, int& nerrs) {
-        nerrs = check_runtime_inputs(team, beg, end);
+        auto p_teamhandle = Kokkos::RangePolicy(team, beg, end);
+        auto tvr          = Kokkos::TeamVectorRange(team, beg, end);
+        nerrs = check_runtime_inputs(p_teamhandle, tvr.start, tvr.end);
       },
       nerrs_team_handle);
   ASSERT_EQ(nerrs_team_handle, 0);
