@@ -1389,6 +1389,14 @@ class RangePolicy
   using base_t = ImplRangePolicy<execution_type, Properties...>;
   using base_t::base_t;
 
+  KOKKOS_INLINE_FUNCTION const execution_type& exec() const {
+    if constexpr (ExecutionSpace<execution_type>) {
+      return static_cast<const base_t*>(this)->space();
+    } else if constexpr (TeamHandle<execution_type>) {
+      return static_cast<const base_t*>(this)->team_handle();
+    }
+  }
+
   KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(
       [[maybe_unused]] int chunk_size) {
     if constexpr (ExecutionSpace<execution_type>) {
