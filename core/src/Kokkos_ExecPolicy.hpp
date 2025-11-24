@@ -50,6 +50,12 @@ struct PolicyUpdate {};
 
 namespace Impl {
 
+// We define RangePolicy<ExecType> with partial specializtions for
+// RangePolicy<ExecSpace> (policy utilizing all available execution space
+// resources) and RangePolicy<TeamHandle> (policy utilizing all available
+// resources of a thread team). The following extracts and "ExecutionType"
+// (execution space or team handle) from a set of template parameters. If non
+// exists, set to DefaultExecutionSpace.
 template <class ExecType>
 concept ExecutionTypeConcept = ExecutionSpace<ExecType> || TeamHandle<ExecType>;
 
@@ -72,29 +78,8 @@ struct extract_execution_type<T, Properties...> {
 template <typename T, typename... Properties>
 class ImplRangePolicy;
 
-/** \brief  Execution policy for work over a range of an integral type.
- *
- * FIXME: update or move with info about partial specialization
- *
- * Valid template argument options:
- *
- *  With a specified execution space:
- *    < ExecSpace , WorkTag , { IntConst | IntType } >
- *    < ExecSpace , WorkTag , void >
- *    < ExecSpace , { IntConst | IntType } , void >
- *    < ExecSpace , void , void >
- *
- *  With the default execution space:
- *    < WorkTag , { IntConst | IntType } , void >
- *    < WorkTag , void , void >
- *    < { IntConst | IntType } , void , void >
- *    < void , void , void >
- *
- *  IntType  is a fundamental integral type
- *  IntConst is an Impl::integral_constant< IntType , Blocking >
- *
- *  Blocking is the granularity of partitioning the range among threads.
- */
+// Specialization of RangePolicy for defining work over a range of an integral
+// type, split up among all resources of an execution space.
 template <ExecutionSpace ExecSpace, class... Properties>
 class ImplRangePolicy<ExecSpace, Properties...>
     : public Impl::PolicyTraits<Properties...> {
@@ -1318,6 +1303,9 @@ struct PatternTagFromImplSpecialization<ParallelScan<Args...>>
 namespace Kokkos {
 
 namespace Impl {
+
+// Extract a Kokkos::IndexType from a set of template parameters. Default to the
+// size_type of the team handles execution space.
 template <class T>
 concept IndexTypeConcept = requires { typename T::type; } &&
                            std::same_as<T, Kokkos::IndexType<typename T::type>>;
@@ -1338,10 +1326,8 @@ struct extract_index_type<Handle, T, Properties...> {
 };
 }  // namespace Impl
 
-/** \brief  Partial Specialization of RangePolicy<TeamHandle>
- *
- *  FIXME: Insert description of ExecSpace vs. TeamHandle vs. Default
- */
+// Specialization of RangePolicy for defining work over a range of an integral
+// type, split up among all resources of a thread team
 template <TeamHandle Handle, class... Properties>
 class ImplRangePolicy<Handle, Properties...>
     : public Impl::TeamVectorRangeBoundariesStruct<
@@ -1374,9 +1360,33 @@ class ImplRangePolicy<Handle, Properties...>
   }
 };
 
-/** \brief  Execution policy for a simple range of numbers
+/** \brief  Execution policy for work over a range of an integral type.
  *
- *  FIXME: Insert description of ExecSpace vs. TeamHandle vs. Default
+ * RangePolicy has two partial specializations: RangePolicy<ExecSpace> and
+ * RangePolicy<TeamHandle>. The former parallizes over all resources of an
+ * execution space, and the latter over all resources of a thread team.
+ *
+ * Valid template argument options:
+ *
+ *  With a specified execution space:
+ *    < ExecSpace , WorkTag , { IntConst | IntType } >
+ *    < ExecSpace , WorkTag , void >
+ *    < ExecSpace , { IntConst | IntType } , void >
+ *    < ExecSpace , void , void >
+ *
+ * With a specified team handle:
+ *    < TeamHandle , void >
+ *    < TeamHandle , IntType >
+ *
+ *  Without specifying an execution type, default behavoir is using
+ * DefaultExecutionSpace with the following template arguments: < WorkTag , {
+ * IntConst | IntType } , void > < WorkTag , void , void > < { IntConst |
+ * IntType } , void , void > < void , void , void >
+ *
+ *  IntType  is a fundamental integral type
+ *  IntConst is an Impl::integral_constant< IntType , Blocking >
+ *
+ *  Blocking is the granularity of partitioning the range among threads.
  */
 template <typename... Properties>
 class RangePolicy
@@ -1389,6 +1399,8 @@ class RangePolicy
   using base_t = ImplRangePolicy<execution_type, Properties...>;
   using base_t::base_t;
 
+  // Return the execution type of the range policy (execution space or team
+  // handle)
   KOKKOS_INLINE_FUNCTION const execution_type& exec() const {
     if constexpr (ExecutionSpace<execution_type>) {
       return static_cast<const base_t*>(this)->space();
@@ -1397,6 +1409,8 @@ class RangePolicy
     }
   }
 
+  // Set chunk size and return the policy. For team handle specialization, this
+  // is a no-op.
   KOKKOS_INLINE_FUNCTION RangePolicy& set_chunk_size(
       [[maybe_unused]] int chunk_size) {
     if constexpr (ExecutionSpace<execution_type>) {
