@@ -25,6 +25,10 @@ constexpr bool compile_time_test() {
   static_assert(std::is_same_v<schedule_type, ExpectedScheduleType>);
   static_assert(std::is_same_v<work_tag, ExpectedWorkTag>);
 
+  static_assert(std::is_void_v<typename Policy::traits::team_handle>);
+  static_assert(
+      std::is_same_v<typename Policy::traits::execution_type, execution_space>);
+
   return true;
 }
 

@@ -48,33 +48,6 @@ namespace Impl {
 struct PolicyUpdate {};
 }  // namespace Impl
 
-namespace Impl {
-
-// We define RangePolicy<ExecType> with partial specializtions for
-// RangePolicy<ExecSpace> (policy utilizing all available execution space
-// resources) and RangePolicy<TeamHandle> (policy utilizing all available
-// resources of a thread team). The following extracts and "ExecutionType"
-// (execution space or team handle) from a set of template parameters. If non
-// exists, set to DefaultExecutionSpace.
-template <class ExecType>
-concept ExecutionTypeConcept = ExecutionSpace<ExecType> || TeamHandle<ExecType>;
-
-template <class... Properties>
-struct extract_execution_type {
-  using type = DefaultExecutionSpace;
-};
-
-template <class T, class... Properties>
-struct extract_execution_type<T, Properties...> {
-  using type = typename extract_execution_type<Properties...>::type;
-};
-
-template <ExecutionTypeConcept T, class... Properties>
-struct extract_execution_type<T, Properties...> {
-  using type = T;
-};
-}  // namespace Impl
-
 template <typename T, typename... Properties>
 class ImplRangePolicy;
 
@@ -1302,40 +1275,14 @@ struct PatternTagFromImplSpecialization<ParallelScan<Args...>>
 
 namespace Kokkos {
 
-namespace Impl {
-
-// Extract a Kokkos::IndexType from a set of template parameters. Default to the
-// size_type of the team handles execution space.
-template <class T>
-concept IndexTypeConcept = requires { typename T::type; } &&
-                           std::same_as<T, Kokkos::IndexType<typename T::type>>;
-
-template <TeamHandle Handle, class... Properties>
-struct extract_index_type {
-  using type = typename Handle::execution_space::size_type;
-};
-
-template <TeamHandle Handle, class T, class... Properties>
-struct extract_index_type<Handle, T, Properties...> {
-  using type = typename extract_index_type<Handle, Properties...>::type;
-};
-
-template <TeamHandle Handle, IndexTypeConcept T, class... Properties>
-struct extract_index_type<Handle, T, Properties...> {
-  using type = T::type;
-};
-}  // namespace Impl
-
 // Specialization of RangePolicy for defining work over a range of an integral
 // type, split up among all resources of a thread team
 template <TeamHandle Handle, class... Properties>
 class ImplRangePolicy<Handle, Properties...>
     : public Impl::TeamVectorRangeBoundariesStruct<
-          typename Impl::extract_index_type<Handle, Properties...>::type,
-          Handle> {
+          typename Impl::PolicyTraits<Properties...>::index_type, Handle> {
  public:
-  using index_type =
-      typename Impl::extract_index_type<Handle, Properties...>::type;
+  using index_type = typename Impl::PolicyTraits<Properties...>::index_type;
   using base_t =
       typename Impl::TeamVectorRangeBoundariesStruct<index_type, Handle>;
   using base_t::base_t;
@@ -1391,11 +1338,11 @@ class ImplRangePolicy<Handle, Properties...>
 template <typename... Properties>
 class RangePolicy
     : public ImplRangePolicy<
-          typename Impl::extract_execution_type<Properties...>::type,
+          typename Impl::PolicyTraits<Properties...>::execution_type,
           Properties...> {
  public:
   using execution_type =
-      typename Impl::extract_execution_type<Properties...>::type;
+      typename Impl::PolicyTraits<Properties...>::execution_type;
   using base_t = ImplRangePolicy<execution_type, Properties...>;
   using base_t::base_t;
 
@@ -1420,6 +1367,12 @@ class RangePolicy
     return *this;
   }
 };
+
+namespace Impl {
+// Helper concept for capturing both exec space and team handle
+template <class ExecType>
+concept ExecutionTypeConcept = ExecutionSpace<ExecType> || TeamHandle<ExecType>;
+}  // namespace Impl
 
 // Deduction guide
 
