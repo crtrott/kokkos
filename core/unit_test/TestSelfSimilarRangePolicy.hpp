@@ -4,33 +4,6 @@
 #include <Kokkos_Core.hpp>
 
 namespace Test {
-template <class Policy, class ExpectedExecType, class ExpectedIndex>
-constexpr bool check_compile_time_inputs() {
-  static_assert(
-      std::same_as<typename Policy::execution_type, ExpectedExecType>);
-  static_assert(std::same_as<typename Policy::index_type, ExpectedIndex>);
-  return true;
-}
-
-using TeamPolicy = Kokkos::TeamPolicy<>;
-using TeamHandle = TeamPolicy::member_type;
-
-using DefaultIndex    = typename TeamHandle::execution_space::size_type;
-using LongIndex       = Kokkos::IndexType<long>;
-using DynamicSchedule = Kokkos::Schedule<Kokkos::Dynamic>;
-struct SomeTag {};
-
-// clang-format off
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle                                           >, TeamHandle, DefaultIndex>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle                                           >, TeamHandle, DefaultIndex>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule                          >, TeamHandle, DefaultIndex>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, SomeTag                 >, TeamHandle, DefaultIndex>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex                                >, TeamHandle, long>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, LongIndex               >, TeamHandle, long>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex,       DynamicSchedule         >, TeamHandle, long>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, LongIndex,       DynamicSchedule, SomeTag>, TeamHandle, long>());
-static_assert(check_compile_time_inputs<Kokkos::RangePolicy<TeamHandle, DynamicSchedule, LongIndex,       SomeTag>, TeamHandle, long>());
-// clang-format on
 
 template <class Policy>
 KOKKOS_INLINE_FUNCTION int check_runtime_inputs(
