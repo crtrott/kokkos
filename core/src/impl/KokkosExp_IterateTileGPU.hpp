@@ -180,46 +180,33 @@ struct DeviceIterateTile<3, PolicyType, Functor, MaxGridSize, Tag> {
     const index_type stride_1 = gridDim.y * blockDim.y;
     const index_type stride_2 = gridDim.z * blockDim.z;
 
+    const int idx[3] = /*PolicyType::inner_direction == Iterate::Left ? {0,1,2} :*/ {2,1,0};
     const index_type start_0 =
-        blockIdx.x * blockDim.x + threadIdx.x + m_policy.m_lower[0];
+        blockIdx.x * blockDim.x + threadIdx.x + m_policy.m_lower[idx[0]];
     const index_type start_1 =
-        blockIdx.y * blockDim.y + threadIdx.y + m_policy.m_lower[1];
+        blockIdx.y * blockDim.y + threadIdx.y + m_policy.m_lower[idx[1]];
     const index_type start_2 =
-        blockIdx.z * blockDim.z + threadIdx.z + m_policy.m_lower[2];
+        blockIdx.z * blockDim.z + threadIdx.z + m_policy.m_lower[idx[2]];
 
     // Iterate::Left, fastest index 0
-    if constexpr (PolicyType::inner_direction == Iterate::Left) {
       // Iterate over dimension 2, 1 and 0 with grid strides
       for (index_type idx_2 = start_2;
-           idx_2 < static_cast<index_type>(m_policy.m_upper[2]);
+           idx_2 < static_cast<index_type>(m_policy.m_upper[idx[2]]);
            idx_2 += stride_2) {
         for (index_type idx_1 = start_1;
-             idx_1 < static_cast<index_type>(m_policy.m_upper[1]);
+             idx_1 < static_cast<index_type>(m_policy.m_upper[idx[1]]);
              idx_1 += stride_1) {
           for (index_type idx_0 = start_0;
-               idx_0 < static_cast<index_type>(m_policy.m_upper[0]);
+               idx_0 < static_cast<index_type>(m_policy.m_upper[idx[0]]);
                idx_0 += stride_0) {
-            Impl::_tag_invoke<Tag>(m_func, idx_0, idx_1, idx_2);
+            if constexpr (PolicyType::inner_direction == Iterate::Left) {
+              Impl::_tag_invoke<Tag>(m_func, idx_0, idx_1, idx_2);
+            } else {
+	      Impl::_tag_invoke<Tag>(m_func, idx_2, idx_1, idx_0);
+            }
           }
         }
       }
-
-    } else {  // Iterate::Right, fastest index 2
-      // Iterate over dimension 0, 1 and 2 with grid strides
-      for (index_type idx_0 = start_0;
-           idx_0 < static_cast<index_type>(m_policy.m_upper[0]);
-           idx_0 += stride_0) {
-        for (index_type idx_1 = start_1;
-             idx_1 < static_cast<index_type>(m_policy.m_upper[1]);
-             idx_1 += stride_1) {
-          for (index_type idx_2 = start_2;
-               idx_2 < static_cast<index_type>(m_policy.m_upper[2]);
-               idx_2 += stride_2) {
-            Impl::_tag_invoke<Tag>(m_func, idx_0, idx_1, idx_2);
-          }
-        }
-      }
-    }
   }  // end exec_range
 
  private:
