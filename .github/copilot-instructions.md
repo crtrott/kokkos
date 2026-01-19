@@ -125,7 +125,7 @@ ctest -j2 --output-on-failure
 
 ### C++ Code Formatting
 
-**CRITICAL**: All C++ code MUST be formatted with clang-format version 16.0 exactly.
+**REQUIRED**: All C++ code MUST be formatted with clang-format version 16.0 exactly.
 
 ```bash
 # Check if you have the correct version
@@ -332,6 +332,6 @@ ctest --output-on-failure
 - **NEVER** build in the source directory - always use a separate build directory
 - **ALWAYS** use clang-format version 16.0 exactly - other versions will fail CI
 - **ALWAYS** use `-j2` for parallel builds in CI to avoid memory issues
-- **Follow these instructions** - they are validated and comprehensive. Only search for additional information if something is unclear, incorrect, or if you encounter an error not documented here.
+- **Use these instructions as your primary reference** - they are validated and comprehensive. Search for additional information if something is unclear, appears incorrect, or if you encounter an error not documented here.
 
 When in doubt, refer to `BUILD.md` for user-facing build documentation or `cmake/README.md` for build system development details.
