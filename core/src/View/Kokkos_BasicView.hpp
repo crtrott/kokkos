@@ -597,6 +597,9 @@ class BasicView {
     m_map = mapping_type(sub_mapping_result.mapping);
     m_acc = sub_accessor_t(src_view.m_acc);
 
+    // Kokkos View precondition checks happen in release builds
+    check_basic_view_constructibility(sub_mapping_result.mapping);
+
 #ifdef KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK
     bool valid = subview_extents_valid(
         src_view, std::make_index_sequence<sizeof...(SliceSpecifiers)>{},
