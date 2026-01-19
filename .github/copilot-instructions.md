@@ -138,6 +138,8 @@ clang-format --version  # Must show version 16.0.x
 CLANG_FORMAT_EXE=/path/to/clang-format-16 ./scripts/apply-clang-format
 ```
 
+**Version requirement**: The `apply-clang-format` script will refuse to run with any version other than 16.0. Different clang-format versions can produce different formatting, causing CI failures. If you don't have version 16.0, either install it or use the `CLANG_FORMAT_EXE` environment variable to point to the correct binary.
+
 **Formatting configuration**: `.clang-format` at repository root (based on Google style with modifications)
 
 ### CMake Formatting
@@ -330,6 +332,6 @@ ctest --output-on-failure
 - **NEVER** build in the source directory - always use a separate build directory
 - **ALWAYS** use clang-format version 16.0 exactly - other versions will fail CI
 - **ALWAYS** use `-j2` for parallel builds in CI to avoid memory issues
-- **TRUST these instructions** - they are validated and comprehensive. Only search for additional information if something is unclear or if you encounter an error not documented here.
+- **Follow these instructions** - they are validated and comprehensive. Only search for additional information if something is unclear, incorrect, or if you encounter an error not documented here.
 
 When in doubt, refer to `BUILD.md` for user-facing build documentation or `cmake/README.md` for build system development details.
