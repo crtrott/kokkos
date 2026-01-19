@@ -4,7 +4,7 @@
 
 **Kokkos** is a C++ performance portability programming ecosystem that provides abstractions for parallel execution and data management on HPC platforms. It supports multiple backend programming models including CUDA, HIP, SYCL, HPX, OpenMP, and C++ threads.
 
-- **Language**: C++ (requires C++17 minimum, supports C++20/C++23)
+- **Language**: C++ (requires C++20 minimum, supports C++23/C++26)
 - **Build System**: CMake (minimum version 3.16)
 - **Repository Size**: ~100MB, primarily C++ source with CMake configuration
 - **Project Type**: High-performance computing library with core, algorithms, containers, and SIMD components
@@ -36,8 +36,8 @@ The build produces these libraries (all typically built as static libraries):
 ## Build Instructions
 
 ### Prerequisites
-- **Compiler**: C++17-capable compiler (g++ 13.3+, clang++ 18.1+, Intel icpc/icpx, etc.)
-- **CMake**: Version 3.16 or later
+- **Compiler**: C++20-capable compiler (g++ 13.3+, clang++ 18.1+, Intel icpc/icpx, etc.)
+- **CMake**: Version 3.22 or later
 - **Python 3**: Required for testing infrastructure
 - **Optional**: clang-format 16.0 for code formatting, cmake-format for CMake file formatting
 
@@ -56,14 +56,14 @@ cmake -DCMAKE_CXX_COMPILER=g++ \
       -DKokkos_ENABLE_SERIAL=ON \
       ..
 
-# 3. Build the library (use -j2 for CI environments to avoid memory issues)
-cmake --build . --parallel 2
+# 3. Build the library (use -j4 for CI environments to avoid memory issues)
+cmake --build . --parallel 4
 
 # 4. Optional: Install
 cmake --build . --target install
 ```
 
-**Build Timing**: Without tests, build takes ~10-15 seconds with `-j2`. With tests enabled, build takes 5+ minutes.
+**Build Timing**: Without tests, build takes ~10-15 seconds with `-j4`. With tests enabled, build takes 5+ minutes.
 
 ### Key CMake Configuration Options
 
@@ -101,7 +101,7 @@ cmake -DCMAKE_CXX_COMPILER=g++ \
       ..
 
 # Build all tests
-cmake --build . --parallel 2
+cmake --build . --parallel 4
 
 # Run all tests
 ctest --output-on-failure
@@ -190,12 +190,12 @@ cmake -B builddir \
   -DCMAKE_CXX_COMPILER=<compiler> \
   -DCMAKE_BUILD_TYPE=<Release|Debug>
 
-cmake --build builddir --parallel 2
+cmake --build builddir --parallel 4
 cd builddir && ctest --output-on-failure
 ```
 
 **Important CI Notes**:
-- CI uses `--parallel 2` for builds to avoid memory issues
+- CI uses `--parallel 4` for builds to avoid memory issues
 - Tests run with `ctest --output-on-failure` 
 - Some workflows use `ctest --timeout 2000` for long tests
 - Clang-format check will FAIL if not using version 16.0 exactly
@@ -225,7 +225,7 @@ mkdir build && cd build && cmake ..
 **Solution**: 
 - For iterative development, build without tests initially: `-DKokkos_ENABLE_TESTS=OFF`
 - Only enable tests when validating changes
-- Use `-j2` instead of `-j$(nproc)` in CI environments
+- Use `-j4` instead of `-j$(nproc)` in CI environments
 
 ### Issue: Wrong clang-format version
 **Error**: "This indent script requires clang-format version 16.0"
@@ -265,16 +265,16 @@ CLANG_FORMAT_EXE=/usr/bin/clang-format-16 ./scripts/apply-clang-format
 4. **Build and test iteratively**:
    ```bash
    # Quick build check (no tests)
-   cd build && cmake --build . --parallel 2
+   cd build && cmake --build . --parallel 4
    
    # Full test validation
-   cd build_test && cmake --build . --parallel 2 && ctest --output-on-failure
+   cd build_test && cmake --build . --parallel 4 && ctest --output-on-failure
    ```
 
 5. **Verify no warnings**:
    ```bash
    cmake -DKokkos_ENABLE_COMPILER_WARNINGS=ON -DCMAKE_CXX_FLAGS="-Werror" ..
-   cmake --build . --parallel 2
+   cmake --build . --parallel 4
    ```
 
 ### Adding New Features
@@ -308,12 +308,12 @@ When adding new CMake options, TPLs, or compiler flags, see `cmake/README.md` fo
 # Minimal build (fastest)
 mkdir build && cd build
 cmake -DCMAKE_CXX_COMPILER=g++ -DKokkos_ENABLE_SERIAL=ON ..
-cmake --build . --parallel 2
+cmake --build . --parallel 4
 
 # Build with tests
 mkdir build && cd build
 cmake -DCMAKE_CXX_COMPILER=g++ -DKokkos_ENABLE_SERIAL=ON -DKokkos_ENABLE_TESTS=ON ..
-cmake --build . --parallel 2
+cmake --build . --parallel 4
 ctest --output-on-failure
 
 # Validate like CI
@@ -323,7 +323,7 @@ cmake -DCMAKE_CXX_COMPILER=g++ \
       -DKokkos_ENABLE_COMPILER_WARNINGS=ON \
       -DCMAKE_CXX_FLAGS="-Werror" \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
-cmake --build . --parallel 2
+cmake --build . --parallel 4
 ctest --output-on-failure
 ```
 
@@ -331,7 +331,7 @@ ctest --output-on-failure
 
 - **NEVER** build in the source directory - always use a separate build directory
 - **ALWAYS** use clang-format version 16.0 exactly - other versions will fail CI
-- **ALWAYS** use `-j2` for parallel builds in CI to avoid memory issues
+- **ALWAYS** use `-j4` for parallel builds in CI to avoid memory issues
 - **Use these instructions as your primary reference** - they are validated and comprehensive. Search for additional information if something is unclear, appears incorrect, or if you encounter an error not documented here.
 
 When in doubt, refer to `BUILD.md` for user-facing build documentation or `cmake/README.md` for build system development details.
