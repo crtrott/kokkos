@@ -5,7 +5,7 @@
 **Kokkos** is a C++ performance portability programming ecosystem that provides abstractions for parallel execution and data management on HPC platforms. It supports multiple backend programming models including CUDA, HIP, SYCL, HPX, OpenMP, and C++ threads.
 
 - **Language**: C++ (requires C++20 minimum, supports C++23/C++26)
-- **Build System**: CMake (minimum version 3.16)
+- **Build System**: CMake (minimum version 3.22)
 - **Repository Size**: ~100MB, primarily C++ source with CMake configuration
 - **Project Type**: High-performance computing library with core, algorithms, containers, and SIMD components
 - **License**: Apache-2.0 WITH LLVM-exception
