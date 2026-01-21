@@ -1,4 +1,10 @@
 # CHANGELOG
+## 5.0.2
+
+[Full Changelog](https://github.com/kokkos/kokkos/compare/5.0.1...5.0.2)
+
+### Bug Fixes
+
 ## 5.0.1
 
 [Full Changelog](https://github.com/kokkos/kokkos/compare/5.0.0...5.0.1)
