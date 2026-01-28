@@ -13,10 +13,10 @@ int main() {
       "classical", 10, 20);
 
   // mdspan style with dynamic extents
-  Kokkos::View<double, Kokkos::dextents<size_t, 2>, Kokkos::layout_left,
-               Kokkos::Impl::SpaceAwareAccessor<
-                   Kokkos::Serial::memory_space,
-                   Kokkos::default_accessor<double>>>
+  Kokkos::View<
+      double, Kokkos::dextents<size_t, 2>, Kokkos::layout_left,
+      Kokkos::Impl::SpaceAwareAccessor<Kokkos::Serial::memory_space,
+                                       Kokkos::default_accessor<double>>>
       view_mdspan("mdspan", 10, 20);
 
   // Verify they work the same way
@@ -26,9 +26,8 @@ int main() {
 
   // mdspan style with static extents
   Kokkos::View<int, Kokkos::extents<size_t, 10, 20>, Kokkos::layout_left,
-               Kokkos::Impl::SpaceAwareAccessor<
-                   Kokkos::Serial::memory_space,
-                   Kokkos::default_accessor<int>>>
+               Kokkos::Impl::SpaceAwareAccessor<Kokkos::Serial::memory_space,
+                                                Kokkos::default_accessor<int>>>
       view_static("static");
 
   static_assert(decltype(view_static)::rank == 2, "Rank should be 2");
@@ -36,10 +35,10 @@ int main() {
                 "Should have no dynamic dimensions");
 
   // mdspan style with layout_right
-  Kokkos::View<float, Kokkos::dextents<size_t, 3>, Kokkos::layout_right,
-               Kokkos::Impl::SpaceAwareAccessor<
-                   Kokkos::Serial::memory_space,
-                   Kokkos::default_accessor<float>>>
+  Kokkos::View<
+      float, Kokkos::dextents<size_t, 3>, Kokkos::layout_right,
+      Kokkos::Impl::SpaceAwareAccessor<Kokkos::Serial::memory_space,
+                                       Kokkos::default_accessor<float>>>
       view_right("right", 5, 10, 15);
 
   static_assert(decltype(view_right)::rank == 3, "Rank should be 3");

@@ -435,13 +435,21 @@ struct ViewTraits<
   using array_layout  = typename ViewTraits<void, Prop...>::array_layout;
   using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
   using specialize    = typename ViewTraits<void, Prop...>::specialize;
-  using hooks_policy  = HooksPolicy;
+  using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // mdspan-style parameters
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 // mdspan-style template parameter support: extents
+// Must be extents and NOT layout or accessor
 template <class Extents, class... Prop>
-struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_extents_v<Extents>>,
-                  Extents, Prop...> {
+struct ViewTraits<
+    std::enable_if_t<Kokkos::Impl::is_mdspan_extents_v<Extents> &&
+                     !Kokkos::Impl::is_mdspan_layout_v<Extents> &&
+                     !Kokkos::Impl::is_mdspan_accessor_v<Extents>>,
+    Extents, Prop...> {
   using execution_space = typename ViewTraits<void, Prop...>::execution_space;
   using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
   using host_mirror_space =
@@ -456,11 +464,17 @@ struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_extents_v<Extents>>,
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
   // Store extents type for later processing
   using extents_type = Extents;
+  // mdspan-style parameters (pass through others)
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 // mdspan-style template parameter support: mdspan layout
+// Must be layout and NOT extents or accessor
 template <class Layout, class... Prop>
-struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_layout_v<Layout>>,
+struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_layout_v<Layout> &&
+                                   !Kokkos::Impl::is_mdspan_extents_v<Layout> &&
+                                   !Kokkos::Impl::is_mdspan_accessor_v<Layout>>,
                   Layout, Prop...> {
   using execution_space = typename ViewTraits<void, Prop...>::execution_space;
   using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
@@ -476,13 +490,19 @@ struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_layout_v<Layout>>,
   using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
   using specialize    = typename ViewTraits<void, Prop...>::specialize;
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // mdspan-style parameters (pass through others)
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 // mdspan-style template parameter support: accessor
+// Must be accessor and NOT extents or layout
 template <class Accessor, class... Prop>
 struct ViewTraits<
-    std::enable_if_t<Kokkos::Impl::is_mdspan_accessor_v<Accessor>>, Accessor,
-    Prop...> {
+    std::enable_if_t<Kokkos::Impl::is_mdspan_accessor_v<Accessor> &&
+                     !Kokkos::Impl::is_mdspan_extents_v<Accessor> &&
+                     !Kokkos::Impl::is_mdspan_layout_v<Accessor>>,
+    Accessor, Prop...> {
   using execution_space = typename ViewTraits<void, Prop...>::execution_space;
   using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
   using host_mirror_space =
@@ -497,6 +517,9 @@ struct ViewTraits<
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
   // Store accessor type for later processing
   using accessor_type = Accessor;
+  // mdspan-style parameters (pass through others)
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
 };
 
 template <class ArrayLayout, class... Prop>
