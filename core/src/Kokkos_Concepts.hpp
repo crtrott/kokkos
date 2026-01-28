@@ -162,6 +162,69 @@ KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF(thread_team_member)
 KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF(host_thread_team_member)
 KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF(graph_kernel)
 
+// mdspan-style type detection
+// NOTE: These traits need to be simple and not require full type definitions
+// More specific trait detection is done in ViewTraits.hpp where mdspan headers
+// are available
+
+// Detect mdspan extents type (has rank_type and index_type typedefs)
+template <typename T>
+struct is_mdspan_extents_impl {
+ private:
+  template <typename U>
+  using have_rank_type = typename U::rank_type;
+  template <typename U>
+  using have_index_type = typename U::index_type;
+  template <typename U>
+  using have_static_extent = decltype(U::static_extent(0));
+
+ public:
+  static constexpr bool value = is_detected_v<have_rank_type, T> &&
+                                is_detected_v<have_index_type, T> &&
+                                is_detected_v<have_static_extent, T>;
+};
+
+template <typename T>
+inline constexpr bool is_mdspan_extents_v = is_mdspan_extents_impl<T>::value;
+
+// Detect mdspan layout type (has layout_type typedef and mapping nested class)
+template <typename T>
+struct is_mdspan_layout_impl {
+ private:
+  template <typename U>
+  using have_layout_type = typename U::layout_type;
+  template <typename U>
+  using have_mapping = typename U::mapping;
+
+ public:
+  static constexpr bool value =
+      is_detected_v<have_layout_type, T> && is_detected_v<have_mapping, T>;
+};
+
+template <typename T>
+inline constexpr bool is_mdspan_layout_v = is_mdspan_layout_impl<T>::value;
+
+// Detect mdspan accessor type (has element_type, data_handle_type,
+// offset_policy)
+template <typename T>
+struct is_mdspan_accessor_impl {
+ private:
+  template <typename U>
+  using have_element_type = typename U::element_type;
+  template <typename U>
+  using have_data_handle_type = typename U::data_handle_type;
+  template <typename U>
+  using have_offset_policy = typename U::offset_policy;
+
+ public:
+  static constexpr bool value = is_detected_v<have_element_type, T> &&
+                                is_detected_v<have_data_handle_type, T> &&
+                                is_detected_v<have_offset_policy, T>;
+};
+
+template <typename T>
+inline constexpr bool is_mdspan_accessor_v = is_mdspan_accessor_impl<T>::value;
+
 }  // namespace Impl
 
 #undef KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF

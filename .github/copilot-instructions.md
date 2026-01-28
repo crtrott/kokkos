@@ -166,7 +166,7 @@ The repository uses multiple CI workflows (`.github/workflows/`):
 
 1. **`continuous-integration-linux.yml`** - Primary Linux testing (g++, clang++, Intel compilers)
 2. **`continuous-integration-windows.yml`** - Windows testing
-3. **`continuous-integration-osx.yml`** - macOS testing  
+3. **`continuous-integration-osx.yml`** - macOS testing
 4. **`clang-format-check.yml`** - Enforces clang-format version 16.0
 5. **`cmake-format-check.yml`** - Enforces CMake formatting
 6. **`codeql.yml`** - Security analysis
@@ -196,7 +196,7 @@ cd builddir && ctest --output-on-failure
 
 **Important CI Notes**:
 - CI uses `--parallel 4` for builds to avoid memory issues
-- Tests run with `ctest --output-on-failure` 
+- Tests run with `ctest --output-on-failure`
 - Some workflows use `ctest --timeout 2000` for long tests
 - Clang-format check will FAIL if not using version 16.0 exactly
 - CI tests both Debug and Release builds
@@ -222,14 +222,14 @@ mkdir build && cd build && cmake ..
 
 ### Issue: Long build times with tests
 **Problem**: Building with tests takes 5+ minutes
-**Solution**: 
+**Solution**:
 - For iterative development, build without tests initially: `-DKokkos_ENABLE_TESTS=OFF`
 - Only enable tests when validating changes
 - Use `-j4` instead of `-j$(nproc)` in CI environments
 
 ### Issue: Wrong clang-format version
 **Error**: "This indent script requires clang-format version 16.0"
-**Solution**: 
+**Solution**:
 ```bash
 # Install clang-format 16 or use environment variable
 CLANG_FORMAT_EXE=/usr/bin/clang-format-16 ./scripts/apply-clang-format
@@ -266,7 +266,7 @@ CLANG_FORMAT_EXE=/usr/bin/clang-format-16 ./scripts/apply-clang-format
    ```bash
    # Quick build check (no tests)
    cd build && cmake --build . --parallel 4
-   
+
    # Full test validation
    cd build_test && cmake --build . --parallel 4 && ctest --output-on-failure
    ```
