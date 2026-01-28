@@ -163,8 +163,11 @@ KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF(host_thread_team_member)
 KOKKOS_IMPL_DEFINE_TRAIT_FROM_TYPEDEF(graph_kernel)
 
 // mdspan-style type detection
+// NOTE: These traits need to be simple and not require full type definitions
+// More specific trait detection is done in ViewTraits.hpp where mdspan headers
+// are available
 
-// Detect mdspan extents type (has rank_type, index_type, rank(), static_extent)
+// Detect mdspan extents type (has rank_type and index_type typedefs)
 template <typename T>
 struct is_mdspan_extents_impl {
  private:
@@ -173,12 +176,12 @@ struct is_mdspan_extents_impl {
   template <typename U>
   using have_index_type = typename U::index_type;
   template <typename U>
-  using have_rank = decltype(std::declval<U>().rank());
+  using have_static_extent = decltype(U::static_extent(0));
 
  public:
   static constexpr bool value = is_detected_v<have_rank_type, T> &&
                                 is_detected_v<have_index_type, T> &&
-                                is_detected_v<have_rank, T>;
+                                is_detected_v<have_static_extent, T>;
 };
 
 template <typename T>

@@ -608,12 +608,22 @@ struct ViewTraits {
       std::conditional_t<!std::is_void_v<typename prop::mdspan_layout>,
                          typename prop::mdspan_layout, void>;
 
+  // Helper to safely get DataType from extents only when extents are provided
+  template <class ElemType, class Extents, class = void>
+  struct SafeDataTypeFromExtents {
+    using type = ElemType;  // No extents, use DataType as-is
+  };
+
+  template <class ElemType, class Extents>
+  struct SafeDataTypeFromExtents<ElemType, Extents,
+                                 std::enable_if_t<!std::is_void_v<Extents>>> {
+    using type = typename Impl::DataTypeFromExtents<ElemType, Extents>::type;
+  };
+
   // When mdspan-style extents is provided, DataType is the element type,
   // and we need to construct the full data type from element type + extents
-  using ActualDataType = std::conditional_t<
-      !std::is_void_v<ExtentsFromProp>,
-      typename Impl::DataTypeFromExtents<DataType, ExtentsFromProp>::type,
-      DataType>;
+  using ActualDataType =
+      typename SafeDataTypeFromExtents<DataType, ExtentsFromProp>::type;
 
   // Convert mdspan layout to ArrayLayout if provided
   using ArrayLayoutFromMDSpan = std::conditional_t<
