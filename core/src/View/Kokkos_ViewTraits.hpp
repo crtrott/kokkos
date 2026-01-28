@@ -195,6 +195,69 @@ constexpr void customize_view_arguments(
 namespace Impl {
 struct UnsupportedKokkosArrayLayout;
 
+// Helper to convert mdspan layout to Kokkos ArrayLayout
+template <class MDSpanLayout>
+struct ArrayLayoutFromMDSpanLayout {
+  using type = void;  // unsupported by default
+};
+
+// Convert layout_left to LayoutLeft
+template <>
+struct ArrayLayoutFromMDSpanLayout<layout_left> {
+  using type = LayoutLeft;
+};
+
+// Convert layout_right to LayoutRight
+template <>
+struct ArrayLayoutFromMDSpanLayout<layout_right> {
+  using type = LayoutRight;
+};
+
+// Convert layout_stride to LayoutStride
+template <>
+struct ArrayLayoutFromMDSpanLayout<layout_stride> {
+  using type = LayoutStride;
+};
+
+// Convert layout_left_padded to LayoutLeft (closest match)
+template <std::size_t PaddingValue>
+struct ArrayLayoutFromMDSpanLayout<
+    Kokkos::Experimental::layout_left_padded<PaddingValue>> {
+  using type = LayoutLeft;
+};
+
+// Convert layout_right_padded to LayoutRight (closest match)
+template <std::size_t PaddingValue>
+struct ArrayLayoutFromMDSpanLayout<
+    Kokkos::Experimental::layout_right_padded<PaddingValue>> {
+  using type = LayoutRight;
+};
+
+// Helper to extract memory space from accessor
+template <class Accessor>
+struct MemorySpaceFromAccessor {
+  using type = void;  // default: no memory space
+};
+
+// Extract memory space from SpaceAwareAccessor
+template <class MemSpace, class NestedAccessor>
+struct MemorySpaceFromAccessor<SpaceAwareAccessor<MemSpace, NestedAccessor>> {
+  using type = MemSpace;
+};
+
+// Helper to determine if accessor implies unmanaged memory
+template <class Accessor>
+struct IsUnmanagedAccessor : std::false_type {};
+
+// default_accessor is unmanaged (raw pointer)
+template <class T>
+struct IsUnmanagedAccessor<default_accessor<T>> : std::true_type {};
+
+// SpaceAwareAccessor with default_accessor nested is unmanaged
+template <class MemSpace, class T>
+struct IsUnmanagedAccessor<SpaceAwareAccessor<MemSpace, default_accessor<T>>>
+    : std::true_type {};
+
 template <class Traits, class Enabled = void>
 struct AccessorFromViewTraits {
   using type =
@@ -329,6 +392,10 @@ struct ViewTraits<void> {
   using memory_traits = void;
   using specialize    = void;
   using hooks_policy  = void;
+  // mdspan-style parameters
+  using extents_type  = void;
+  using mdspan_layout = void;
+  using accessor_type = void;
 };
 
 template <class... Prop>
@@ -346,6 +413,10 @@ struct ViewTraits<void, void, Prop...> {
   using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
   using specialize    = typename ViewTraits<void, Prop...>::specialize;
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // mdspan-style parameters
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 template <class HooksPolicy, class... Prop>
@@ -367,6 +438,67 @@ struct ViewTraits<
   using hooks_policy  = HooksPolicy;
 };
 
+// mdspan-style template parameter support: extents
+template <class Extents, class... Prop>
+struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_extents_v<Extents>>,
+                  Extents, Prop...> {
+  using execution_space = typename ViewTraits<void, Prop...>::execution_space;
+  using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
+  using host_mirror_space =
+      typename ViewTraits<void, Prop...>::host_mirror_space;
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  using HostMirrorSpace KOKKOS_DEPRECATED_WITH_COMMENT(
+      "Use host_mirror_space instead.") = host_mirror_space;
+#endif
+  using array_layout  = typename ViewTraits<void, Prop...>::array_layout;
+  using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
+  using specialize    = typename ViewTraits<void, Prop...>::specialize;
+  using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // Store extents type for later processing
+  using extents_type = Extents;
+};
+
+// mdspan-style template parameter support: mdspan layout
+template <class Layout, class... Prop>
+struct ViewTraits<std::enable_if_t<Kokkos::Impl::is_mdspan_layout_v<Layout>>,
+                  Layout, Prop...> {
+  using execution_space = typename ViewTraits<void, Prop...>::execution_space;
+  using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
+  using host_mirror_space =
+      typename ViewTraits<void, Prop...>::host_mirror_space;
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  using HostMirrorSpace KOKKOS_DEPRECATED_WITH_COMMENT(
+      "Use host_mirror_space instead.") = host_mirror_space;
+#endif
+  // Store mdspan layout for later conversion to ArrayLayout
+  using mdspan_layout = Layout;
+  using array_layout  = typename ViewTraits<void, Prop...>::array_layout;
+  using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
+  using specialize    = typename ViewTraits<void, Prop...>::specialize;
+  using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+};
+
+// mdspan-style template parameter support: accessor
+template <class Accessor, class... Prop>
+struct ViewTraits<
+    std::enable_if_t<Kokkos::Impl::is_mdspan_accessor_v<Accessor>>, Accessor,
+    Prop...> {
+  using execution_space = typename ViewTraits<void, Prop...>::execution_space;
+  using memory_space    = typename ViewTraits<void, Prop...>::memory_space;
+  using host_mirror_space =
+      typename ViewTraits<void, Prop...>::host_mirror_space;
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  using HostMirrorSpace KOKKOS_DEPRECATED_WITH_COMMENT(
+      "Use host_mirror_space instead.") = host_mirror_space;
+#endif
+  using array_layout  = typename ViewTraits<void, Prop...>::array_layout;
+  using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
+  using specialize    = typename ViewTraits<void, Prop...>::specialize;
+  using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // Store accessor type for later processing
+  using accessor_type = Accessor;
+};
+
 template <class ArrayLayout, class... Prop>
 struct ViewTraits<std::enable_if_t<Kokkos::is_array_layout<ArrayLayout>::value>,
                   ArrayLayout, Prop...> {
@@ -384,6 +516,10 @@ struct ViewTraits<std::enable_if_t<Kokkos::is_array_layout<ArrayLayout>::value>,
   using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
   using specialize    = typename ViewTraits<void, Prop...>::specialize;
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // mdspan-style parameters
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 template <class Space, class... Prop>
@@ -414,6 +550,10 @@ struct ViewTraits<std::enable_if_t<Kokkos::is_space<Space>::value>, Space,
   using memory_traits = typename ViewTraits<void, Prop...>::memory_traits;
   using specialize    = typename ViewTraits<void, Prop...>::specialize;
   using hooks_policy  = typename ViewTraits<void, Prop...>::hooks_policy;
+  // mdspan-style parameters
+  using extents_type  = typename ViewTraits<void, Prop...>::extents_type;
+  using mdspan_layout = typename ViewTraits<void, Prop...>::mdspan_layout;
+  using accessor_type = typename ViewTraits<void, Prop...>::accessor_type;
 };
 
 template <class MemoryTraits, class... Prop>
@@ -446,6 +586,10 @@ struct ViewTraits<
   using memory_traits = MemoryTraits;
   using specialize    = void;
   using hooks_policy  = void;
+  // mdspan-style parameters
+  using extents_type  = void;
+  using mdspan_layout = void;
+  using accessor_type = void;
 };
 
 template <class DataType, class... Properties>
@@ -454,36 +598,80 @@ struct ViewTraits {
   // Unpack the properties arguments
   using prop = ViewTraits<void, Properties...>;
 
+  // Check if mdspan-style extents was provided
+  using ExtentsFromProp =
+      std::conditional_t<!std::is_void_v<typename prop::extents_type>,
+                         typename prop::extents_type, void>;
+
+  // Check if mdspan-style layout was provided
+  using MDSpanLayoutFromProp =
+      std::conditional_t<!std::is_void_v<typename prop::mdspan_layout>,
+                         typename prop::mdspan_layout, void>;
+
+  // When mdspan-style extents is provided, DataType is the element type,
+  // and we need to construct the full data type from element type + extents
+  using ActualDataType = std::conditional_t<
+      !std::is_void_v<ExtentsFromProp>,
+      typename Impl::DataTypeFromExtents<DataType, ExtentsFromProp>::type,
+      DataType>;
+
+  // Convert mdspan layout to ArrayLayout if provided
+  using ArrayLayoutFromMDSpan = std::conditional_t<
+      !std::is_void_v<MDSpanLayoutFromProp>,
+      typename Impl::ArrayLayoutFromMDSpanLayout<MDSpanLayoutFromProp>::type,
+      void>;
+
+  // Check if accessor was provided to extract memory space
+  using MemorySpaceFromAccessor =
+      std::conditional_t<!std::is_void_v<typename prop::accessor_type>,
+                         typename Impl::MemorySpaceFromAccessor<
+                             typename prop::accessor_type>::type,
+                         void>;
+
   using ExecutionSpace =
       std::conditional_t<!std::is_void_v<typename prop::execution_space>,
                          typename prop::execution_space,
                          Kokkos::DefaultExecutionSpace>;
 
-  using MemorySpace =
+  // Use memory space from accessor if provided, otherwise from prop or default
+  using MemorySpace = std::conditional_t<
+      !std::is_void_v<MemorySpaceFromAccessor>, MemorySpaceFromAccessor,
       std::conditional_t<!std::is_void_v<typename prop::memory_space>,
                          typename prop::memory_space,
-                         typename ExecutionSpace::memory_space>;
+                         typename ExecutionSpace::memory_space>>;
 
-  using ArrayLayout =
+  // Use ArrayLayout from mdspan_layout conversion if available, otherwise from
+  // prop or default
+  using ArrayLayout = std::conditional_t<
+      !std::is_void_v<ArrayLayoutFromMDSpan>, ArrayLayoutFromMDSpan,
       std::conditional_t<!std::is_void_v<typename prop::array_layout>,
                          typename prop::array_layout,
-                         typename ExecutionSpace::array_layout>;
+                         typename ExecutionSpace::array_layout>>;
 
   using HostMirrorSpace = std::conditional_t<
       !std::is_void_v<typename prop::host_mirror_space>,
       typename prop::host_mirror_space,
       typename Kokkos::Impl::HostMirror<ExecutionSpace>::Space>;
 
-  using MemoryTraits =
-      std::conditional_t<!std::is_void_v<typename prop::memory_traits>,
-                         typename prop::memory_traits,
-                         typename Kokkos::MemoryTraits<>>;
+  // Determine if accessor implies unmanaged memory
+  static constexpr bool is_unmanaged_from_accessor =
+      !std::is_void_v<typename prop::accessor_type> &&
+      Impl::IsUnmanagedAccessor<typename prop::accessor_type>::value;
+
+  // Use default MemoryTraits or modify based on accessor
+  using MemoryTraits = std::conditional_t<
+      !std::is_void_v<typename prop::memory_traits>,
+      typename prop::memory_traits,
+      std::conditional_t<is_unmanaged_from_accessor,
+                         Kokkos::MemoryTraits<Kokkos::Unmanaged>,
+                         Kokkos::MemoryTraits<>>>;
 
   using HooksPolicy = typename prop::hooks_policy;
 
   // Analyze data type's properties,
   // May be specialized based upon the layout and value type
-  using data_analysis = Kokkos::Impl::ViewDataAnalysis<DataType, ArrayLayout>;
+  using data_analysis =
+      Kokkos::Impl::ViewDataAnalysis<ActualDataType, ArrayLayout>;
 
  public:
   //------------------------------------
