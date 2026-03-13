@@ -163,6 +163,7 @@ foreach(Tag Threads;Serial;OpenMP;Cuda;HPX;OpenACC;HIP;SYCL)
         MDSpan
         MDSpanAtomicAccessor
         MDSpanConversion
+        LayoutTiled
         MinMaxClamp
         NumericTraits
         OccupancyControlTrait
@@ -189,7 +190,7 @@ foreach(Tag Threads;Serial;OpenMP;Cuda;HPX;OpenACC;HIP;SYCL)
     )
     if(NOT Kokkos_ENABLE_IMPL_MDSPAN)
       list(REMOVE_ITEM ${Tag}_TESTNAMES1B MDSpanAtomicAccessor MDSpanConversion SpaceAwareAccessorAccessViolation
-           SpaceAwareAccessor
+           SpaceAwareAccessor LayoutTiled
       )
     endif()
     # This test case causes MSVC to fail with "number of sections exceeded object file format limit"
