@@ -346,13 +346,14 @@ foreach(Tag Threads;Serial;OpenMP;Cuda;HPX;OpenACC;HIP;SYCL;NextSilicon)
     # detail tests for the mdspan based View
     if(Kokkos_ENABLE_IMPL_MDSPAN)
       set(BV_TestNames
+          AllocationAndSpanSize
           BasicView
+          CreateMirrorViewAndCopy
+          LegacyLayoutFunction
           ReferenceCountedAccessor
           ReferenceCountedDataHandle
-          AllocationAndSpanSize
           ViewEqualityOperator
-          LegacyLayoutFunction
-          CreateMirrorViewAndCopy
+          ViewCtorConvertibleToPtr
       )
       if(NOT Kokkos_ENABLE_IMPL_VIEW_LEGACY AND NOT Kokkos_ENABLE_OPENACC)
         list(APPEND BV_TestNames ViewCustomizationAccessorArg ViewCustomizationAllocationType
