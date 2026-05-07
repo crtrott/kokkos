@@ -940,12 +940,26 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
             Impl::mapping_from_array_layout<typename mdspan_type::mapping_type>(
                 arg_layout)) {}
 
+  // Need both rvalue and lvalue versions of ctors which take
+  // things that are convertible to pointer_type.
+  // Can't take P by value since that would prevent value semantic
+  // types that allow implicit extraction of their ptr.
   template <class P, class... Args>
     requires(!std::is_null_pointer_v<P> &&
              std::is_convertible_v<P, pointer_type> &&
-             std::is_constructible_v<typename base_t::data_handle_type, P> &&
+             std::is_constructible_v<typename base_t::data_handle_type,
+                                     pointer_type> &&
              sizeof...(Args) != rank() + 1)
-  KOKKOS_FUNCTION explicit View(P ptr_, Args... args)
+  KOKKOS_FUNCTION explicit View(P&& ptr_, Args... args)
+      : View(Kokkos::view_wrap(static_cast<pointer_type>(ptr_)), args...) {}
+
+  template <class P, class... Args>
+    requires(!std::is_null_pointer_v<P> &&
+             std::is_convertible_v<P, pointer_type> &&
+             std::is_constructible_v<typename base_t::data_handle_type,
+                                     pointer_type> &&
+             sizeof...(Args) != rank() + 1)
+  KOKKOS_FUNCTION explicit View(P& ptr_, Args... args)
       : View(Kokkos::view_wrap(static_cast<pointer_type>(ptr_)), args...) {}
 
   // Special function to be preferred over the above for string literals

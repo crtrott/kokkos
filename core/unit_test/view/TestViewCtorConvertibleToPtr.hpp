@@ -15,11 +15,14 @@ namespace {
 
 struct ArrayLike {
   double data[3];
-  KOKKOS_INLINE_FUNCTION
+  KOKKOS_FUNCTION
   operator double*() { return data; }
+  KOKKOS_FUNCTION
   operator const double*() const { return data; }
 };
 
+// clang-format off
+// clang-format gets confused, and thinks the lambda closure brace is the namespace
 void from_array_like() {
   Kokkos::View<ArrayLike*, TEST_EXECSPACE> a("A", 2);
   int errors = 0;
@@ -27,23 +30,23 @@ void from_array_like() {
     {
       Kokkos::View<double*> b(a(0), 3);
       if(b.data() != &a(0).data[0]) err++;
+    }
+    {
+      Kokkos::View<double*, Kokkos::MemoryUnmanaged> b(a(0), 3);
+      if (b.data() != &a(0).data[0]) err++;
+    }
+    {
+      Kokkos::View<const double*> b(a(0), 3);
+      if (b.data() != &a(0).data[0]) err++;
+    }
+    {
+      Kokkos::View<const double*, Kokkos::MemoryUnmanaged> b(a(0), 3);
+      if (b.data() != &a(0).data[0]) err++;
+    }
+  }, errors);
+  ASSERT_EQ(errors, 0);
 }
-{
-  Kokkos::View<double*, Kokkos::MemoryUnmanaged> b(a(0), 3);
-  if (b.data() != &a(0).data[0]) err++;
-}
-{
-  Kokkos::View<const double*> b(a(0), 3);
-  if (b.data() != &a(0).data[0]) err++;
-}
-{
-  Kokkos::View<const double*, Kokkos::MemoryUnmanaged> b(a(0), 3);
-  if (b.data() != &a(0).data[0]) err++;
-}
-}  // namespace
-, errors);
-ASSERT_EQ(errors, 0);
-}
+// clang-format on
 
 void from_carray() {
   int errors = 0;
