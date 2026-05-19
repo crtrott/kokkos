@@ -25,6 +25,7 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #ifndef DESUL_CUDA_ARCH_IS_PRE_VOLTA
 
 #include <desul/atomics/cuda/CUDA_asm_exchange.hpp>
+#include <desul/atomics/cuda/CUDA_asm_loadstore.hpp>
 
 #else
 
