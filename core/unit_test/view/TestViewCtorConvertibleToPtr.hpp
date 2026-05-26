@@ -144,7 +144,7 @@ void from_ptr() {
   ASSERT_EQ(errors, 0);
 }
 
-std::nullptr_t& nullptr_ref(std::nullptr_t& val) { return val; }
+KOKKOS_FUNCTION std::nullptr_t& nullptr_ref(std::nullptr_t& val) { return val; }
 
 void from_nullptr_and_0() {
   int errors = 0;
