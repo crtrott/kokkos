@@ -174,21 +174,23 @@ void from_nullptr_and_0() {
           if (b.data() != nullptr) err++;
         }
         {
-          Kokkos::View<const double*, TEST_EXECSPACE> b(0, 0);
+          Kokkos::View<const double*, TEST_EXECSPACE> b(
+              0, 0);  // NOLINT(modernize-use-nullptr)
           if (b.data() != nullptr) err++;
         }
         {
           Kokkos::View<const double*, TEST_EXECSPACE, Kokkos::MemoryUnmanaged>
-              b(0, 0);
+              b(0, 0);  // NOLINT(modernize-use-nullptr)
           if (b.data() != nullptr) err++;
         }
         {
-          Kokkos::View<const double*, TEST_EXECSPACE> b(NULL, 0);
+          Kokkos::View<const double*, TEST_EXECSPACE> b(
+              NULL, 0);  // NOLINT(modernize-use-nullptr)
           if (b.data() != nullptr) err++;
         }
         {
           Kokkos::View<const double*, TEST_EXECSPACE, Kokkos::MemoryUnmanaged>
-              b(NULL, 0);
+              b(NULL, 0);  // NOLINT(modernize-use-nullptr)
           if (b.data() != nullptr) err++;
         }
       },
