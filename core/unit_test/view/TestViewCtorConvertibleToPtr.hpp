@@ -162,7 +162,7 @@ void from_nullptr_and_0() {
         }
         // need a temporary so we can test reference to nullptr_t
         // you can't get a non-const ref to nullptr (the variable)
-        std::nullptr_t nullptrtmp;
+        std::nullptr_t nullptrtmp = {};
         {
           Kokkos::View<const double*, TEST_EXECSPACE> b(nullptr_ref(nullptrtmp),
                                                         0);

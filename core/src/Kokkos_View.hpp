@@ -1138,7 +1138,7 @@ class View : public Impl::BasicViewFromTraits<DataType, Properties...>::type {
         msvc_workaround_ctor_condition_2<Args...>()
 #endif
             )
-  View(const std::string arg_label, const Args... args)
+  View(const std::string& arg_label, const Args... args)
       : View(
             view_alloc_from_label_and_integrals(
                 std::bool_constant<traits::impl_is_customized>(), arg_label,
