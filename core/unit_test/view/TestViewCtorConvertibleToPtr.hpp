@@ -11,16 +11,14 @@ import kokkos.core_impl;
 #include <Kokkos_Core.hpp>
 #endif
 
-#define N 3
+constexpr int N = 3;
 
 namespace {
 
 struct ArrayLike {
   double data[N];
-  KOKKOS_FUNCTION
-  operator double*() { return data; }
-  KOKKOS_FUNCTION
-  operator const double*() const { return data; }
+  KOKKOS_FUNCTION operator double*() { return data; }
+  KOKKOS_FUNCTION operator const double*() const { return data; }
 };
 
 // clang-format off
@@ -81,8 +79,7 @@ void from_carray() {
 
 struct CustomPtr {
   double* ptr;
-  KOKKOS_INLINE_FUNCTION
-  operator double*() const { return ptr; }
+  KOKKOS_FUNCTION operator double*() const { return ptr; }
 };
 
 void from_custom_ptr() {
