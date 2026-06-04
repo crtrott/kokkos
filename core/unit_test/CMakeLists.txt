@@ -230,6 +230,12 @@ foreach(Tag Threads;Serial;OpenMP;Cuda;HPX;OpenACC;HIP;SYCL;NextSilicon)
     )
     configure_file(${dir}/dummy.cpp ${file})
     list(APPEND ${Tag}_SOURCES1B ${file})
+    set(file ${dir}/Test${Tag}_Reduction.cpp)
+    file(WRITE ${dir}/dummy.cpp "#include <Test${Tag}_Category.hpp>\n"
+                                "#include <range_policy/TestReduction.hpp>\n"
+    )
+    configure_file(${dir}/dummy.cpp ${file})
+    list(APPEND ${Tag}_SOURCES1B ${file})
 
     set(${Tag}_SOURCES2A)
     set(${Tag}_TESTNAMES2A
