@@ -179,6 +179,19 @@ class ImplRangePolicy<ExecSpace, Properties...>
     this->m_space = std::move(space);
   }
 
+  ImplRangePolicy(const ImplRangePolicy&)            = default;
+  ImplRangePolicy(ImplRangePolicy&&)                 = default;
+  ImplRangePolicy& operator=(const ImplRangePolicy&) = default;
+  ImplRangePolicy& operator=(ImplRangePolicy&&)      = default;
+
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH()
+  KOKKOS_FUNCTION ~ImplRangePolicy() {
+    KOKKOS_IF_ON_DEVICE(
+        Kokkos::abort(
+            "Attempt to call destructor of RangePolicy<HostExec> from device");)
+  }
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP()
+
  private:
   /** \brief set chunk_size to a discrete value*/
   inline void impl_set_chunk_size(int chunk_size) {
