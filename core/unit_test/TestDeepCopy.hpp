@@ -41,11 +41,14 @@ void test_deep_copy_assignable_types(Extents... exts) {
 
   ASSERT_TRUE(h_b((exts - 1)...) == 2.5);
 
+#if defined(KOKKOS_HAS_SHARED_SPACE) || \
+    defined(KOKKOS_HAS_SHARED_HOST_PINNED_SPACE)
   // Read b back through its host mirror and check the value.
   auto check_b = [&](double expected) {
     Kokkos::deep_copy(h_b, b);
     ASSERT_TRUE(h_b((exts - 1)...) == expected);
   };
+#endif
 
 #ifdef KOKKOS_HAS_SHARED_SPACE
   // Gate on accessibility so every kernel below runs on TEST_EXECSPACE;
