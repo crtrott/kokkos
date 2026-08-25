@@ -60,6 +60,10 @@
 #define KOKKOS_IMPL_HOST_FUNCTION __host__
 #define KOKKOS_IMPL_DEVICE_FUNCTION __device__
 
+#ifdef KOKKOS_ENABLE_CUDA_TILE
+#define KOKKOS_IMPL_TILE_FUNCTION __tile__
+#endif
+
 // clang-format off
 #ifdef KOKKOS_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE
 #define KOKKOS_IMPL_RELOCATABLE_FUNCTION __device__ __host__
