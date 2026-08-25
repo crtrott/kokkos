@@ -1383,10 +1383,7 @@ if(KOKKOS_ENABLE_CUDA_TILE)
       OR KOKKOS_ARCH_BLACKWELL
       OR KOKKOS_ARCH_RUBIN)
   )
-    message(
-      FATAL_ERROR
-        "Kokkos_ENABLE_CUDA_TILE is ON but no CUDA architecture sm_80 or newer is enabled."
-    )
+    message(FATAL_ERROR "Kokkos_ENABLE_CUDA_TILE is ON but no CUDA architecture sm_80 or newer is enabled.")
   endif()
 endif()
 
