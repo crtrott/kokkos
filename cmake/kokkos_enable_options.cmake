@@ -28,6 +28,7 @@ kokkos_enable_option(CUDA_RELOCATABLE_DEVICE_CODE OFF "Whether to enable relocat
 # as MPI communication layer.
 kokkos_enable_option(IMPL_CUDA_MALLOC_ASYNC OFF "Whether to enable CudaMallocAsync (requires CUDA Toolkit 11.2)")
 kokkos_enable_option(IMPL_CUDA_UNIFIED_MEMORY OFF "Whether to leverage unified memory architectures for CUDA")
+kokkos_enable_option(CUDA_TILE OFF "Whether to enable NVIDIA CUDA Tile (cuTile) support")
 
 kokkos_enable_option(DEPRECATED_CODE_5 ON "Whether code deprecated in major release 5 is available")
 kokkos_enable_option(DEPRECATION_WARNINGS ON "Whether to emit deprecation warnings")
@@ -187,6 +188,7 @@ check_device_specific_options(
   OPTIONS
   CUDA_RELOCATABLE_DEVICE_CODE
   CUDA_CONSTEXPR
+  CUDA_TILE
   IMPL_CUDA_MALLOC_ASYNC
   IMPL_CUDA_UNIFIED_MEMORY
 )

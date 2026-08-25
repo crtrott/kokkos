@@ -733,6 +733,10 @@ if(Kokkos_ENABLE_CUDA)
   kokkos_add_executable_and_test(
     CoreUnitTest_CudaInterOpGraphMultiGPU SOURCES UnitTestMainInit.cpp cuda/TestCuda_InterOp_GraphMultiGPU.cpp
   )
+
+  if(KOKKOS_ENABLE_CUDA_TILE)
+    kokkos_add_executable_and_test(CoreUnitTest_CudaTile SOURCES UnitTestMainInit.cpp cuda/TestCuda_Tile.cpp)
+  endif()
 endif()
 
 if(Kokkos_ENABLE_HIP)
