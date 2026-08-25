@@ -243,6 +243,10 @@ do
   --extended-lambda|--expt-extended-lambda|--expt-relaxed-constexpr|--Wno-deprecated-gpu-targets|-Wno-deprecated-gpu-targets|-allow-unsupported-compiler|--allow-unsupported-compiler|--disable-warnings)
     cuda_args="$cuda_args $1"
     ;;
+  #Handle CUDA Tile (cuTile) compilation args
+  -enable-tile|--enable-tile|-tile-only|--tile-only|-simt-only|--simt-only)
+    cuda_args="$cuda_args $1"
+    ;;
   #Handle known nvcc args that have an argument
   -maxrregcount=*|--maxrregcount=*|-time=*|-Xptxas=*|--fdevice-time-trace=*|-fdevice-time-trace=*)
     cuda_args="$cuda_args $1"

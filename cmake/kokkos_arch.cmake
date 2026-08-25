@@ -214,6 +214,14 @@ if(KOKKOS_ENABLE_CUDA_CONSTEXPR)
   endif()
 endif()
 
+if(KOKKOS_ENABLE_CUDA_TILE)
+  if(KOKKOS_CXX_COMPILER_ID STREQUAL NVIDIA)
+    global_append(KOKKOS_CUDA_OPTIONS "--enable-tile")
+  else()
+    message(FATAL_ERROR "Kokkos_ENABLE_CUDA_TILE requires the NVIDIA CUDA compiler (nvcc / nvcc_wrapper)")
+  endif()
+endif()
+
 if(KOKKOS_CXX_COMPILER_ID STREQUAL Clang)
   set(CUDA_ARCH_FLAG "--cuda-gpu-arch")
   global_append(KOKKOS_CUDA_OPTIONS -x cuda)
@@ -1362,6 +1370,18 @@ endif()
 
 if(KOKKOS_ARCH_RUBIN107)
   set(KOKKOS_ARCH_RUBIN ON)
+endif()
+
+if(KOKKOS_ENABLE_CUDA_TILE)
+  if(NOT
+     (KOKKOS_ARCH_AMPERE
+      OR KOKKOS_ARCH_ADA89
+      OR KOKKOS_ARCH_HOPPER
+      OR KOKKOS_ARCH_BLACKWELL
+      OR KOKKOS_ARCH_RUBIN)
+  )
+    message(FATAL_ERROR "Kokkos_ENABLE_CUDA_TILE requires NVIDIA Ampere architecture or newer.")
+  endif()
 endif()
 
 function(CHECK_AMD_APU ARCH)
