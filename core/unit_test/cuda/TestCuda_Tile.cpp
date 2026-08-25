@@ -77,4 +77,70 @@ TEST(cuda, tile_vector_add) {
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFree(d_out));
 }
 
+// This struct implements the minimal compatibility requirements for Driver
+// handed to the implementation tile launch function
+struct TileVectorAddDummyDriver {
+  float* a;
+  float* b;
+  float* out;
+  std::size_t n;
+
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
+  void operator()() const {
+    namespace ct = cuda::tiles;
+    using namespace ct::literals;
+
+    a   = ct::assume_aligned(a, 16_ic);
+    b   = ct::assume_aligned(b, 16_ic);
+    out = ct::assume_aligned(out, 16_ic);
+
+    auto shape  = ct::shape{8_ic};
+    auto extent = ct::extents{n};
+
+    auto a_view = ct::partition_view{ct::tensor_span{a, extent}, shape};
+    auto b_view = ct::partition_view{ct::tensor_span{b, extent}, shape};
+    auto o_view = ct::partition_view{ct::tensor_span{out, extent}, shape};
+
+    int bx = ct::bid().x;
+    o_view.store_masked(a_view.load_masked(bx) + b_view.load_masked(bx), bx);
+  }
+};
+
+void cuda_tile_kernel_invoker() {
+  constexpr std::size_t N = 256;
+
+  Kokkos::View<float*, Kokkos::Cuda> a("A", N);
+  Kokkos::View<float*, Kokkos::Cuda> b("A", N);
+  Kokkos::View<float*, Kokkos::Cuda> out("A", N);
+
+  Kokkos::Cuda cuda_instance;
+
+  Kokkos::parallel_for(
+      N, KOKKOS_LAMBDA(int i) {
+        a(i) = i;
+        b(i) = 2 * i;
+      });
+
+  using impl_launch_invoker = Kokkos::Impl::CudaParallelLaunchTileKernelInvoker<
+      TileVectorAddDummyDriver,
+      Kokkos::Impl::CudaLaunchMechanism::GlobalMemory>;
+
+  TileVectorAddDummyDriver driver{a.data(), b.data(), out.data(), N};
+
+  dim3 grid{1, 1, 1};
+  dim3 block{1, 1, 1};
+  impl_launch_invoker::invoke_kernel(
+      driver, grid, block, /* shmem */ 0,
+      cuda_instance->impl_internal_space_instance());
+
+  cuda_instance.fence();
+
+  auto h_out = Kokkos::create_mirror_view_and_copy(out);
+  for (std::size_t i = 0; i < N; ++i) {
+    ASSERT_EQ(h_out(i), float(3 * i));
+  }
+}
+
+TEST(cuda, tile_kernel_invoker) { cuda_tile_kernel_invoker(); }
+
 }  // namespace Test
