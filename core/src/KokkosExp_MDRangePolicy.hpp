@@ -532,4 +532,60 @@ MDRangePolicy(ES const&, Array<T, N> const&, Array<T, N> const&,
 
 }  // namespace Kokkos
 
+// TODO: this should become KOKKOS_ENABLE_TILE when we have a fallback impl
+#ifdef KOKKOS_ENABLE_CUDA_TILE
+// TileMDRangePolicy
+namespace Kokkos::Experimental {
+
+// TODO: inherit privately, and explicitly pull in base class members
+template <class... Properties>
+class TileMDRangePolicy : private MDRangePolicy<Properties...> {
+  using base_t = MDRangePolicy<Properties...>;
+
+ public:
+  using execution_policy = TileMDRangePolicy;
+
+  // import for now the members we actually need, since we are throwing away
+  // tiling
+  using execution_space  = base_t::execution_space;
+  using array_index_type = base_t::array_index_type;
+  using index_type       = base_t::index_type;
+  using point_type       = base_t::point_type;
+  using work_tag         = base_t::work_tag;
+  using base_t::inner_direction;
+
+  using base_t::space;
+
+  KOKKOS_FUNCTION
+  static constexpr size_t rank() { return base_t::rank; }
+
+  template <class T>
+  TileMDRangePolicy(const execution_space& work_space,
+                    Kokkos::Array<T, rank()> const& lower,
+                    Kokkos::Array<T, rank()> const& upper)
+      : base_t(work_space, lower, upper, []() {
+          Kokkos::Array<T, rank()> a;
+          for (int i = 0; i < rank(); i++) a[i] = 1;
+          return a;
+        }()) {}
+
+  TileMDRangePolicy(const execution_space& work_space, point_type const& lower,
+                    point_type const& upper)
+      : base_t(work_space, lower, upper, []() {
+          point_type a;
+          for (int i = 0; i < rank(); i++) a[i] = 1;
+          return a;
+        }()) {}
+
+  auto lower(size_t r) const { return base_t::m_lower[r]; }
+  auto upper(size_t r) const { return base_t::m_upper[r]; }
+  auto num_tiles() const { return base_t::m_num_tiles; }
+
+  static_assert(
+      std::is_same_v<typename base_t::execution_space, Kokkos::Cuda>,
+      "TileMDRangePolicy is only supported for the Cuda execution space");
+};
+}  // namespace Kokkos::Experimental
+#endif
+
 #endif  // KOKKOS_CORE_EXP_MD_RANGE_POLICY_HPP

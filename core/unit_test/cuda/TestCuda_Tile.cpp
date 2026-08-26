@@ -161,4 +161,66 @@ void cuda_tile_kernel_invoker() {
 
 TEST(cuda, tile_kernel_invoker) { cuda_tile_kernel_invoker(); }
 
+template <size_t TileSize>
+struct TileVectorAddFunctor {
+  float* a;
+  float* b;
+  float* out;
+  int N, M;
+
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
+  void operator()(int i, int j) const {
+    namespace ct = cuda::tiles;
+    using namespace ct::literals;
+
+    auto shape  = ct::shape<TileSize, TileSize>{};
+    auto extent = ct::extents{N, M};
+
+    auto a_view = ct::partition_view{ct::tensor_span{a, extent}, shape};
+    auto b_view = ct::partition_view{ct::tensor_span{b, extent}, shape};
+    auto o_view = ct::partition_view{ct::tensor_span{out, extent}, shape};
+
+    auto a_plus_b = a_view.load(i, j) + b_view.load(i, j);
+    o_view.store(a_plus_b, i, j);
+  }
+};
+
+void cuda_tile_parallel_for() {
+  int N = 32;
+  int M = 24;
+
+  constexpr int tile_size = 8;
+
+  Kokkos::View<float**, Kokkos::Cuda> a("A", N, M);
+  Kokkos::View<float**, Kokkos::Cuda> b("B", N, M);
+  Kokkos::View<float**, Kokkos::Cuda> out("Out", N, M);
+
+  Kokkos::Cuda cuda_instance;
+
+  Kokkos::parallel_for(
+      Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<2>>(cuda_instance,
+                                                           {0, 0}, {N, M}),
+      KOKKOS_LAMBDA(int i, int j) {
+        a(i, j) = 1000 * i + j;
+        b(i, j) = 2000 * i + 2 * j;
+      });
+
+  Kokkos::parallel_for(
+      Kokkos::Experimental::TileMDRangePolicy<Kokkos::Cuda, Kokkos::Rank<2>>(
+          cuda_instance, {0, 0}, {N / tile_size, M / tile_size}),
+      TileVectorAddFunctor<tile_size>{a.data(), b.data(), out.data(), N, M});
+
+  int errors;
+  Kokkos::parallel_reduce(
+      Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<2>>(cuda_instance,
+                                                           {0, 0}, {N, M}),
+      KOKKOS_LAMBDA(int i, int j, int& error) {
+        if (out(i, j) != 3000 * i + 3 * j) error++;
+      },
+      errors);
+  ASSERT_EQ(errors, 0);
+}
+
+TEST(cuda, tile_parallel_for) { cuda_tile_parallel_for(); }
+
 }  // namespace Test

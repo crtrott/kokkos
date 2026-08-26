@@ -78,11 +78,13 @@ struct Array {
     return N;
   }
 
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
   KOKKOS_INLINE_FUNCTION constexpr reference operator[](size_type i) {
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
     return m_internal_implementation_private_member_data[i];
   }
 
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
   KOKKOS_INLINE_FUNCTION constexpr const_reference operator[](
       size_type i) const {
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
