@@ -487,4 +487,8 @@ class ParallelReduce<CombinedFunctorReducerType,
 }  // namespace Kokkos::Impl
 #endif
 
+#ifdef KOKKOS_ENABLE_CUDA_TILE
+#include <Cuda/Kokkos_Cuda_Parallel_MDRangeTile.hpp>
+#endif
+
 #endif  // KOKKOS_CUDA_PARALLEL_MD_RANGE_HPP

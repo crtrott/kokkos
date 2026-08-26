@@ -78,14 +78,26 @@ struct Array {
     return N;
   }
 
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
   KOKKOS_INLINE_FUNCTION constexpr reference operator[](size_type i) {
+// FIXME-TILE: we can't support bounds checking in tile mode yet,
+// and there is no way to distinguish tile compilation vs
+// CUDA scalar compilation
+#ifndef KOKKOS_ENABLE_CUDA_TILE
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
+#endif
     return m_internal_implementation_private_member_data[i];
   }
 
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
   KOKKOS_INLINE_FUNCTION constexpr const_reference operator[](
       size_type i) const {
+// FIXME-TILE: we can't support bounds checking in tile mode yet,
+// and there is no way to distinguish tile compilation vs
+// CUDA scalar compilation
+#ifndef KOKKOS_ENABLE_CUDA_TILE
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
+#endif
     return m_internal_implementation_private_member_data[i];
   }
 
