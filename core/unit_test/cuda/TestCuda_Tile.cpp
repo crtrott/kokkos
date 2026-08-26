@@ -14,6 +14,8 @@ import kokkos.core;
 #include <array>
 #include <cstddef>
 
+#include <Cuda/Kokkos_Cuda_KernelLaunchTile.hpp>
+
 namespace Test {
 
 __tile_global__ void tile_vector_add(float* __restrict__ a,
@@ -78,13 +80,85 @@ TEST(cuda, tile_vector_add) {
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaMemcpy(h_out.data(), d_out, sizeof(float) * N,
                                         cudaMemcpyDeviceToHost));
 
+  int errors = 0;
   for (std::size_t i = 0; i < N; ++i) {
-    ASSERT_FLOAT_EQ(h_out[i], h_a[i] + h_b[i]);
+    if (h_out[i] != h_a[i] + h_b[i]) errors++;
   }
+  errors = 0;
 
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFree(d_a));
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFree(d_b));
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFree(d_out));
 }
+
+// This struct implements the minimal compatibility requirements for Driver
+// handed to the implementation tile launch function
+struct TileVectorAddDummyDriver {
+  float* a;
+  float* b;
+  float* out;
+  std::size_t n;
+
+  KOKKOS_EXPERIMENTAL_TILE_FUNCTION
+  void operator()() const {
+    namespace ct = cuda::tiles;
+    using namespace ct::literals;
+
+    constexpr auto tile_size = 8_ic;
+    auto shape               = ct::shape{tile_size};
+    auto extent              = ct::extents{n};
+
+    auto a_view = ct::partition_view{ct::tensor_span{a, extent}, shape};
+    auto b_view = ct::partition_view{ct::tensor_span{b, extent}, shape};
+    auto o_view = ct::partition_view{ct::tensor_span{out, extent}, shape};
+
+    const size_t n_tile       = n / tile_size;
+    const size_t n_tile_block = n_tile / ct::num_blocks().x;
+    const size_t tile_start   = ct::bid().x * n_tile_block;
+    const size_t tile_end     = tile_start + n_tile_block;
+    for (size_t tile_index : ct::irange(tile_start, tile_end)) {
+      auto a_plus_b =
+          a_view.load_masked(tile_index) + b_view.load_masked(tile_index);
+      o_view.store_masked(a_plus_b, tile_index);
+    }
+  }
+};
+
+void cuda_tile_kernel_invoker() {
+  constexpr std::size_t N = 256;
+
+  Kokkos::View<float*, Kokkos::Cuda> a("A", N);
+  Kokkos::View<float*, Kokkos::Cuda> b("A", N);
+  Kokkos::View<float*, Kokkos::Cuda> out("A", N);
+
+  Kokkos::Cuda cuda_instance;
+
+  Kokkos::parallel_for(
+      N, KOKKOS_LAMBDA(int i) {
+        a(i) = i;
+        b(i) = 2 * i;
+      });
+
+  using impl_launch_invoker = Kokkos::Impl::CudaParallelLaunchTileKernelInvoker<
+      TileVectorAddDummyDriver,
+      Kokkos::Impl::CudaLaunchMechanism::GlobalMemory>;
+
+  TileVectorAddDummyDriver driver{a.data(), b.data(), out.data(), N};
+
+  dim3 grid{1, 1, 1};
+  impl_launch_invoker::invoke_kernel(
+      driver, grid, cuda_instance.impl_internal_space_instance());
+
+  cuda_instance.fence();
+
+  auto h_out = Kokkos::create_mirror_view_and_copy(out);
+  int errors = 0;
+  for (std::size_t i = 0; i < N; ++i) {
+    if (h_out(i) != float(3 * i)) errors++;
+  }
+  ASSERT_EQ(errors, 0);
+}
+
+TEST(cuda, tile_kernel_invoker) { cuda_tile_kernel_invoker(); }
 
 }  // namespace Test

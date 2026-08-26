@@ -396,6 +396,12 @@
 #define KOKKOS_RELOCATABLE_FUNCTION KOKKOS_IMPL_RELOCATABLE_FUNCTION
 #endif
 
+#if defined(KOKKOS_IMPL_TILE_FUNCTION)
+#define KOKKOS_EXPERIMENTAL_TILE_FUNCTION KOKKOS_IMPL_TILE_FUNCTION
+#else
+#define KOKKOS_EXPERIMENTAL_TILE_FUNCTION
+#endif
+
 //----------------------------------------------------------------------------
 // Define empty macro for restrict if necessary:
 
