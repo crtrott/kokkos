@@ -84,39 +84,40 @@ struct ViewValueFunctor {
 
   template <typename Tag>
   void parallel_for_implementation() {
-    // Use a 64-bit index range: allocations can exceed what the execution
-    // space default index_type (e.g. 32-bit on CUDA/HIP) can represent.
-    using PolicyType =
-        Kokkos::RangePolicy<ExecSpace, Kokkos::IndexType<size_t>, Tag>;
-    PolicyType policy(space, size_t(0), n);
-    uint64_t kpID = 0;
-    if (Kokkos::Profiling::profileLibraryLoaded()) {
-      const std::string functor_name =
-          (std::is_same_v<Tag, DestroyTag>
-               ? "Kokkos::View::destruction [" + name + "]"
-               : "Kokkos::View::initialization [" + name + "]");
-      Kokkos::Profiling::beginParallelFor(
-          functor_name, Kokkos::Profiling::Experimental::device_id(space),
-          &kpID);
-    }
+    // This does a warning suppression for NVCC 13
+    // which wasn't supressable with diagnostic push/pop
+    // about calling host functions inside a host-device function
+    KOKKOS_IF_ON_HOST((
+        // Use a 64-bit index range: allocations can exceed what the execution
+        // space default index_type (e.g. 32-bit on CUDA/HIP) can represent.
+        using PolicyType =
+            Kokkos::RangePolicy<ExecSpace, Kokkos::IndexType<size_t>, Tag>;
+        PolicyType policy(space, size_t(0), n); uint64_t kpID = 0;
+        if (Kokkos::Profiling::profileLibraryLoaded()) {
+          const std::string functor_name =
+              (std::is_same_v<Tag, DestroyTag>
+                   ? "Kokkos::View::destruction [" + name + "]"
+                   : "Kokkos::View::initialization [" + name + "]");
+          Kokkos::Profiling::beginParallelFor(
+              functor_name, Kokkos::Profiling::Experimental::device_id(space),
+              &kpID);
+        }
 
 #ifdef KOKKOS_ENABLE_CUDA
-    if constexpr (std::is_same<ExecSpace, Kokkos::Cuda>::value) {
-      Kokkos::Impl::cuda_prefetch_pointer(space.cuda_stream(), ptr,
-                                          sizeof(ValueType) * n, true);
-    }
+        if constexpr (std::is_same<ExecSpace, Kokkos::Cuda>::value) {
+          Kokkos::Impl::cuda_prefetch_pointer(space.cuda_stream(), ptr,
+                                              sizeof(ValueType) * n, true);
+        }
 #endif
-    const Kokkos::Impl::ParallelFor<ViewValueFunctor, PolicyType> closure(
-        *this, policy);
-    closure.execute();
-    if (Kokkos::Profiling::profileLibraryLoaded()) {
-      Kokkos::Profiling::endParallelFor(kpID);
-    }
-    if (default_exec_space || std::is_same_v<Tag, DestroyTag>) {
-      space.fence(std::is_same_v<Tag, DestroyTag>
-                      ? "Kokkos::View::destruction before deallocate"
-                      : "Kokkos::View::initialization");
-    }
+        const Kokkos::Impl::ParallelFor<ViewValueFunctor, PolicyType>
+            closure(*this, policy);
+        closure.execute(); if (Kokkos::Profiling::profileLibraryLoaded()) {
+          Kokkos::Profiling::endParallelFor(kpID);
+        } if (default_exec_space || std::is_same_v<Tag, DestroyTag>) {
+          space.fence(std::is_same_v<Tag, DestroyTag>
+                          ? "Kokkos::View::destruction before deallocate"
+                          : "Kokkos::View::initialization");
+        }))
   }
 
   // Shortcut for zero initialization
