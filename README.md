@@ -47,16 +47,20 @@ To start learning about Kokkos:
 ## Obtaining Kokkos
 
 The latest release of Kokkos can be obtained from the [GitHub releases page](https://github.com/kokkos/kokkos/releases/latest).
+Tarballs downloaded from the release page are cryptographically signed.
 
-The current release is [5.1.0](https://github.com/kokkos/kokkos/releases/tag/5.1.0).
+For build pipelines where an automatic update to the latest version of
+Kokkos is desired, GitHub does provide dynamically generated tarballs via
 
 ```bash
-curl -OJ -L https://github.com/kokkos/kokkos/releases/download/5.1.0/kokkos-5.1.0.tar.gz
-# Or with wget
-wget https://github.com/kokkos/kokkos/releases/download/5.1.0/kokkos-5.1.0.tar.gz
-# Or with git
-git clone --depth=2 --branch 5.1.0 https://github.com/kokkos/kokkos.git
+# with curl
+curl -L https://api.github.com/repos/kokkos/kokkos/tarball -o latest.tar.gz
+# with wget
+wget https://api.github.com/repos/kokkos/kokkos/tarball
 ```
+
+Note: the generated directory name does include a SHA and is not the same for every release.
+
 
 To clone the latest development version of Kokkos from GitHub:
 
