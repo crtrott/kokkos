@@ -293,7 +293,6 @@ void dynamic_view_deep_copy_mismatch() {
     FAIL() << "It should have thrown.";
   } catch (std::runtime_error const& error) {
     std::string msg = error.what();
-    // FIXME: label returned by DynamicView is empty
     std::string expected =
         "Error: Kokkos::deep_copy extents of views don't match: " +
         dview.label() + "(11) view(10) ";
@@ -308,7 +307,6 @@ void dynamic_view_deep_copy_mismatch() {
     FAIL() << "It should have thrown.";
   } catch (std::runtime_error const& error) {
     std::string msg = error.what();
-    // FIXME: label returned by DynamicView is empty
     std::string expected =
         "Error: Kokkos::deep_copy extents of views don't match: view(10) " +
         dview.label() + "(11) ";
@@ -326,7 +324,6 @@ void dynamic_view_deep_copy_mismatch() {
     FAIL() << "It should have thrown.";
   } catch (std::runtime_error const& error) {
     std::string msg = error.what();
-    // FIXME: label returned by DynamicView is empty
     std::string expected =
         "Error: Kokkos::deep_copy extents of views don't match: " +
         dview2.label() + "(10) " + dview.label() + "(11) ";
@@ -341,7 +338,6 @@ void dynamic_view_deep_copy_mismatch() {
     FAIL() << "It should have thrown.";
   } catch (std::runtime_error const& error) {
     std::string msg = error.what();
-    // FIXME: label returned by DynamicView is empty
     std::string expected =
         "Error: Kokkos::deep_copy extents of views don't match: " +
         dview2.label() + "(10) " + dview.label() + "(11) ";
